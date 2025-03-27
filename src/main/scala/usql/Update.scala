@@ -21,7 +21,7 @@ case class Update(sql: SqlBase) {
     sql.withPreparedStatement { statement =>
       statement.executeUpdate()
       Using.resource(statement.getGeneratedKeys) { resultSet =>
-        if (resultSet.next()) {
+        if resultSet.next() then {
           d.parseRow(resultSet)
         } else {
           throw new SqlResultMissingGenerated("Missing row for getGeneratedKeys")

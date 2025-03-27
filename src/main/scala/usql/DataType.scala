@@ -21,7 +21,7 @@ trait DataType[T] {
 
   def extractOptionalBySqlIdx(cIdx: Int, rs: ResultSet): Option[T] = {
     val candidate = Option(extractBySqlIdx(cIdx, rs))
-    if (rs.wasNull()) {
+    if rs.wasNull() then {
       None
     } else {
       candidate

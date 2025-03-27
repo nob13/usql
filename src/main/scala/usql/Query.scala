@@ -9,7 +9,7 @@ case class Query(sql: SqlBase) {
   /** Run a query for one row. */
   def one[T]()(using rowParser: ResultRowDecoder[T], cp: ConnectionProvider): Option[T] = {
     run { resultSet =>
-      if (resultSet.next()) {
+      if resultSet.next() then {
         Some(rowParser.parseRow(resultSet))
       } else {
         None
@@ -21,7 +21,7 @@ case class Query(sql: SqlBase) {
   def all[T]()(using rowParser: ResultRowDecoder[T], cp: ConnectionProvider): Vector[T] = {
     run { resultSet =>
       val builder = Vector.newBuilder[T]
-      while (resultSet.next()) {
+      while resultSet.next() do {
         builder += rowParser.parseRow(resultSet)
       }
       builder.result()

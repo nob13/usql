@@ -60,7 +60,7 @@ object ResultRowDecoder {
         val _    = row.getObject(cIdx)
         row.wasNull()
       }
-      if (isNone) {
+      if isNone then {
         None
       } else {
         val inner = rd.parseRow(offset, row)

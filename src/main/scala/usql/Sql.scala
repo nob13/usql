@@ -37,7 +37,7 @@ extension (sc: StringContext) {
         case (part :: restParts, (param: InnerSql) :: restParams)                              =>
           // Inner Sql
 
-          val inner = if (part.isEmpty) {
+          val inner = if part.isEmpty then {
             Nil
           } else {
             List(part -> SqlInterpolationParameter.Empty)

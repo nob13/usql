@@ -38,7 +38,7 @@ object NameMapping {
     var lastIsUpper = false
     var first       = true
     s.foreach { c =>
-      if (c.isUpper && !lastIsUpper && !first) {
+      if c.isUpper && !lastIsUpper && !first then {
         builder += '_'
       }
       builder += c.toLower

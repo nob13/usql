@@ -13,7 +13,7 @@ case class SqlIdentifier(name: String, quoted: Boolean) {
 
   /** Serialize the identifier. */
   def serialize: String = {
-    if (quoted) {
+    if quoted then {
       "\"" + name + "\""
     } else {
       name
@@ -50,10 +50,10 @@ object SqlIdentifier {
   }
 
   def fromString(s: String): SqlIdentifier = {
-    if (s.length >= 2 && s.startsWith("\"") && s.endsWith("\"")) {
+    if s.length >= 2 && s.startsWith("\"") && s.endsWith("\"") then {
       SqlIdentifier(s.drop(1).dropRight(1), true)
     } else {
-      if (SqlReservedWords.isReserved(s)) {
+      if SqlReservedWords.isReserved(s) then {
         SqlIdentifier(s, quoted = true)
       } else {
         SqlIdentifier(s, quoted = false)
