@@ -34,8 +34,10 @@ usePgpKeyHex("77D0E9E04837F8CBBCD56429897A43978251C225")
 
 ThisBuild / version      := artefactVersion
 ThisBuild / organization := "net.reactivecore"
-ThisBuild / scalaVersion := "3.3.3"
+ThisBuild / scalaVersion := "3.7.0-RC1"
 ThisBuild / Test / fork  := true
+ThisBuild / scalacOptions ++= Seq("-new-syntax", "-rewrite")
+
 
 val scalaTestVersion = "3.2.17"
 
