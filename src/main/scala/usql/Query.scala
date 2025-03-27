@@ -27,7 +27,7 @@ case class Query(sql: SqlBase) {
       builder.result()
     }
   }
-  
+
   /** Run with some method decoding the result set. */
   private def run[T](f: ResultSet => T)(using cp: ConnectionProvider): T = {
     sql.withPreparedStatement { statement =>
