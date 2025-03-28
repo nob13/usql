@@ -3,6 +3,7 @@ package usql.dao
 import usql.{ParameterFiller, ResultRowDecoder}
 
 import java.sql.{PreparedStatement, ResultSet}
+import scala.deriving.Mirror
 
 /** Something which has fields (e.g. a case class) */
 trait SqlFielded[T] extends SqlColumnar[T] {
@@ -48,6 +49,24 @@ trait SqlFielded[T] extends SqlColumnar[T] {
 
     override def cardinality: Int = SqlFielded.this.cardinality
   }
+}
+
+object SqlFielded {
+
+  /** Simple implementation. */
+  case class SimpleSqlFielded[T](
+      fields: Seq[Field[?]],
+      splitter: T => List[Any],
+      builder: List[Any] => T
+  ) extends SqlFielded[T] {
+    override protected def split(value: T): Seq[Any] = splitter(value)
+
+    override protected def build(fieldValues: Seq[Any]): T = builder(fieldValues.toList)
+  }
+
+  inline def derived[T <: Product: Mirror.ProductOf](using nm: NameMapping = NameMapping.Default): SqlFielded[T] =
+    Macros.buildFielded[T]
+
 }
 
 /** A Field of a case class. */

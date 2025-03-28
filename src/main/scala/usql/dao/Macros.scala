@@ -59,14 +59,19 @@ object Macros {
   }
 
   /** Combined TypeInfos for a tuple. */
-  case class TypeInfos[T](infos: List[TypeInfo[_]])
+  case class TypeInfos[T](infos: List[TypeInfo[_]], builder: List[Any] => T)
 
   object TypeInfos {
     given forTuple[H, T <: Tuple](
         using typeInfo: TypeInfo[H],
         tailInfos: TypeInfos[T]
-    ): TypeInfos[H *: T] = TypeInfos(typeInfo :: tailInfos.infos)
-    given empty: TypeInfos[EmptyTuple] = TypeInfos(Nil)
+    ): TypeInfos[H *: T] = TypeInfos(
+      typeInfo :: tailInfos.infos,
+      builder = values => {
+        values.head.asInstanceOf[H] *: tailInfos.builder(values.tail)
+      }
+    )
+    given empty: TypeInfos[EmptyTuple] = TypeInfos(Nil, _ => EmptyTuple)
   }
 
   inline def buildTabular[T <: Product](using nm: NameMapping, mirror: Mirror.ProductOf[T]): SqlTabular[T] = {
@@ -224,5 +229,18 @@ object Macros {
     }
   }
    */
+
+  inline def buildFielded[T <: Product](
+      using nm: NameMapping,
+      mirror: Mirror.ProductOf[T]
+  ): SqlFielded[T] = {
+    val labels: List[String]                        = deriveLabels[T]
+    val nameAnnotations: List[Option[ColumnName]]   = columnNameAnnotations[T]
+    val groupAnnotations: List[Option[ColumnGroup]] = columnGroupAnnotations[T]
+    val typeInfos                                   = summonInline[TypeInfos[mirror.MirroredElemTypes]]
+    val splitter: T => List[Any]                    = v => v.productIterator.toList
+
+    ???
+  }
 
 }
