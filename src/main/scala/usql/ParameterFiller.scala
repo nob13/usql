@@ -10,6 +10,11 @@ trait ParameterFiller[T] {
   /** Fill something at the zero-based position index into the prepared statement. */
   def fill(offset: Int, ps: PreparedStatement, value: T): Unit
 
+  /** Fill some value without type checking. */
+  private[usql] def fillUnchecked(offset: Int, ps: PreparedStatement, value: Any): Unit = {
+    fill(offset, ps, value.asInstanceOf[T])
+  }
+
   /** Fill at position 0 */
   def fill(ps: PreparedStatement, value: T): Unit = fill(0, ps, value)
 
