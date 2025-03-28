@@ -36,12 +36,6 @@ case class SqlIdentifiers(identifiers: Seq[SqlIdentifier]) {
   }
 
   def size: Int = identifiers.size
-
-  /** ?-Placeholders for each identifier */
-  def placeholders: SqlRawPart = SqlRawPart(identifiers.map(_.placeholder.s).mkString(","))
-
-  /** identifier = ?-Placeholders for Update statements */
-  def namedPlaceholders: SqlRawPart = SqlRawPart(identifiers.map(_.namedPlaceholder.s).mkString(","))
 }
 
 object SqlIdentifier {

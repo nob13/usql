@@ -16,10 +16,8 @@ case class Alias[T](
   /** Refers to all aliased columns */
   def columns: SqlRawPart = {
     SqlRawPart(
-      tabular.columns.identifiers
-        .map { i =>
-          apply(i).s
-        }
+      tabular.columns.columns
+        .map { c => apply(c.id).s }
         .mkString(",")
     )
   }

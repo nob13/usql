@@ -31,10 +31,8 @@ object SqlTabular {
 
   case class SimpleTabular[T](
       tableName: SqlIdentifier,
-      columns: SqlIdentifiers,
+      columns: SqlColumns,
       rowDecoder: ResultRowDecoder[T],
       parameterFiller: ParameterFiller[T]
-  ) extends SqlTabular[T] {
-    override def cardinality: Int = columns.size
-  }
+  ) extends SqlTabular[T]
 }

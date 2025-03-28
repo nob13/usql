@@ -7,11 +7,11 @@ import scala.deriving.Mirror
 /** Encapsulates column data and codecs for a product type */
 trait SqlColumnar[T] {
 
-  /** The column names. */
-  def columns: SqlIdentifiers
+  /** The columns */
+  def columns: SqlColumns
 
-  /** Count of column names. */
-  def cardinality: Int
+  /** Count of columns */
+  def cardinality: Int = columns.count
 
   /** Decoder for a full row. */
   def rowDecoder: ResultRowDecoder[T]
@@ -36,10 +36,8 @@ object SqlColumnar {
     Macros.buildColumnar[T]
 
   case class SimpleColumnar[T](
-      columns: SqlIdentifiers,
+      columns: SqlColumns,
       rowDecoder: ResultRowDecoder[T],
       parameterFiller: ParameterFiller[T]
-  ) extends SqlColumnar[T] {
-    override def cardinality: Int = columns.size
-  }
+  ) extends SqlColumnar[T]
 }

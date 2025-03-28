@@ -16,16 +16,19 @@ object Macros {
     val groupAnnotations: List[Option[ColumnGroup]] = columnGroupAnnotations[T]
     val typeInfos                                   = summonInline[TypeInfos[mirror.MirroredElemTypes]]
 
-    val columnNames = SqlIdentifiers {
+    val colums = SqlColumns {
       labels.zip(nameAnnotations).zip(typeInfos.infos).zip(groupAnnotations).flatMap {
-        case (((label, nameAnnotation), _: TypeInfo.Scalar[?]), _)                       =>
+        case (((label, nameAnnotation), typeInfo: TypeInfo.Scalar[?]), _)                =>
           val id = nameAnnotation.map(a => SqlIdentifier.fromString(a.name)).getOrElse(nm.columnToSql(label))
-          Some(id)
+          Some(
+            SqlColumn(id, typeInfo.dataType)
+          )
         case (((label, nameAnnotation), c: TypeInfo.Columnar[?]), maybeColumnAnnotation) =>
           val columnAnnotation = maybeColumnAnnotation.getOrElse(ColumnGroup())
           val memberName       = nameAnnotation.map(_.name).getOrElse(nm.columnToSql(label).name)
-          c.columnar.columns.identifiers.map { childIdentifier =>
-            columnAnnotation.columnName(memberName, childIdentifier)
+          c.columnar.columns.map { c =>
+            val columnId = columnAnnotation.columnName(memberName, c.id)
+            SqlColumn(columnId, c.dataType)
           }
       }
     }
@@ -37,7 +40,7 @@ object Macros {
       summonInline[ParameterFiller[mirror.MirroredElemTypes]].contraMap[T](x => Tuple.fromProductTyped(x)(using mirror))
 
     SqlColumnar.SimpleColumnar(
-      columns = columnNames,
+      columns = colums,
       rowDecoder = rowDecoder,
       parameterFiller = parameterFiller
     )
@@ -221,8 +224,5 @@ object Macros {
     }
   }
    */
-
-
-
 
 }
