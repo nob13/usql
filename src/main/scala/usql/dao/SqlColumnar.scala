@@ -9,7 +9,7 @@ trait SqlColumnar[T] {
 
   /** The columns */
   def columns: SqlColumns
-
+  
   /** Count of columns */
   def cardinality: Int = columns.count
 

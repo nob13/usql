@@ -1,13 +1,18 @@
 package usql.dao
 
-import usql.{DataType, SqlIdentifier}
-
 /** Something which has fields (e.g. a case class) */
 trait SqlFielded[T] extends SqlColumnar[T] {
 
   /** Returns the available fields. */
-  def fields: Field[?]
+  def fields: Seq[Field[?]]
 
+  override def columns: SqlColumns = SqlColumns {
+    fields.flatMap { field =>
+      field.columns.columns
+    }
+  }
+  
+  
 }
 
 /** A Field of a case class. */
