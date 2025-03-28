@@ -240,7 +240,21 @@ object Macros {
     val typeInfos                                   = summonInline[TypeInfos[mirror.MirroredElemTypes]]
     val splitter: T => List[Any]                    = v => v.productIterator.toList
 
-    ???
+    val fields =
+      labels.zip(nameAnnotations).zip(typeInfos.infos).zip(groupAnnotations).map {
+        case (((label, nameAnnotation), typeInfo: TypeInfo.Scalar[?]), _)                =>
+          val id     = nameAnnotation.map(a => SqlIdentifier.fromString(a.name)).getOrElse(nm.columnToSql(label))
+          val column = SqlColumn(id, typeInfo.dataType)
+          Field.Column(label, column)
+        case (((label, nameAnnotation), c: TypeInfo.Columnar[?]), maybeColumnAnnotation) =>
+          // TODO: Hack
+          Field.Group(label, c.columnar.asInstanceOf[SqlFielded[?]])
+      }
+    SqlFielded.SimpleSqlFielded(
+      fields = fields,
+      splitter = splitter,
+      builder = typeInfos.builder.andThen(mirror.fromTuple)
+    )
   }
 
 }
