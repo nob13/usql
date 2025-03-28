@@ -29,8 +29,8 @@ class DerivedColumnNameTest extends TestBase {
 
     // No autocomplete in IntelliJ, but in VS Code
 
-    println(s"Path1: ${Person.col.name.show}")
-    println(s"Path2: ${Person.col.coordinate.x.show}")
+    // println(s"Path1: ${Person.col.name.show}")
+    // println(s"Path2: ${Person.col.coordinate.x.show}")
 
   }
 }

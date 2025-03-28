@@ -11,6 +11,9 @@ trait SqlFielded[T] extends SqlColumnar[T] {
   /** Returns the available fields. */
   def fields: Seq[Field[?]]
 
+  /** Access to the columns */
+  def cols: ColumnPath[T] = ColumnPath(this, Nil)
+
   /** Split an instance into its fields */
   protected def split(value: T): Seq[Any]
 
