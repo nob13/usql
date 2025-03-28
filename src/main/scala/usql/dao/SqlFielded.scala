@@ -11,8 +11,6 @@ trait SqlFielded[T] extends SqlColumnar[T] {
       field.columns.columns
     }
   }
-  
-  
 }
 
 /** A Field of a case class. */
