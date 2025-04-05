@@ -105,7 +105,7 @@ object Field {
     override def columns: SqlColumns = SqlColumns {
       fielded.columns.map { column =>
         column.copy(
-          id = group.columnName(columnBaseName.name, column.id)
+          id = group.mapping.map(columnBaseName, column.id)
         )
       }
     }

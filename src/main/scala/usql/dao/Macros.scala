@@ -24,10 +24,10 @@ object Macros {
             SqlColumn(id, typeInfo.dataType)
           )
         case (((label, nameAnnotation), c: TypeInfo.Columnar[?]), maybeColumnAnnotation) =>
-          val columnAnnotation = maybeColumnAnnotation.getOrElse(ColumnGroup())
-          val memberName       = nameAnnotation.map(_.name).getOrElse(nm.columnToSql(label).name)
+          val columnAnnotation          = maybeColumnAnnotation.getOrElse(ColumnGroup())
+          val memberName: SqlIdentifier = nameAnnotation.map(_.id).getOrElse(nm.columnToSql(label))
           c.columnar.columns.map { c =>
-            val columnId = columnAnnotation.columnName(memberName, c.id)
+            val columnId = columnAnnotation.mapping.map(memberName, c.id)
             SqlColumn(columnId, c.dataType)
           }
       }

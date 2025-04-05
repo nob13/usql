@@ -1,0 +1,21 @@
+package usql.dao
+
+import usql.SqlIdentifier
+
+/** Maps an inner column name inside a ColumnGroup. */
+trait ColumnGroupMapping {
+  def map(fieldName: SqlIdentifier, childId: SqlIdentifier): SqlIdentifier
+}
+
+object ColumnGroupMapping {
+
+  /** Simple Pattern based column group mapping. */
+  case class Pattern(pattern: String = "%m_%c") extends ColumnGroupMapping {
+    override def map(fieldName: SqlIdentifier, childId: SqlIdentifier): SqlIdentifier = {
+      val applied = pattern
+        .replace("%m", fieldName.name)
+        .replace("%c", childId.name)
+      SqlIdentifier(applied, quoted = fieldName.quoted || childId.quoted)
+    }
+  }
+}

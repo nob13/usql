@@ -8,7 +8,9 @@ import scala.annotation.StaticAnnotation
 case class TableName(name: String) extends StaticAnnotation
 
 /** Annotation to override the default column name in [[SqlColumnar]] */
-case class ColumnName(name: String) extends StaticAnnotation
+case class ColumnName(name: String) extends StaticAnnotation {
+  def id: SqlIdentifier = SqlIdentifier.fromString(name)
+}
 
 /**
  * Controls the way nested column group names are generated.
@@ -19,11 +21,6 @@ case class ColumnName(name: String) extends StaticAnnotation
  */
 case class ColumnGroup(pattern: String = "%m_%c") extends StaticAnnotation {
 
-  /** Generates the required column name. */
-  def columnName(memberName: String, childColumn: SqlIdentifier): SqlIdentifier = {
-    val applied = pattern
-      .replace("%m", memberName)
-      .replace("%c", childColumn.name)
-    SqlIdentifier(applied, childColumn.quoted)
-  }
+  /** Mapping for deriving names. */
+  def mapping: ColumnGroupMapping = ColumnGroupMapping.Pattern(pattern)
 }
