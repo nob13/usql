@@ -1,6 +1,6 @@
 package usql.dao
 
-import usql.{ParameterFiller, ResultRowDecoder}
+import usql.{ParameterFiller, ResultRowDecoder, SqlIdentifier}
 
 import java.sql.{PreparedStatement, ResultSet}
 import scala.deriving.Mirror
@@ -100,8 +100,15 @@ object Field {
   }
 
   /** A Field which maps to a nested case class */
-  case class Group[T](fieldName: String, fielded: SqlFielded[T]) extends Field[T] {
-    override def columns: SqlColumns = fielded.columns
+  case class Group[T](fieldName: String, group: ColumnGroup, columnBaseName: SqlIdentifier, fielded: SqlFielded[T])
+      extends Field[T] {
+    override def columns: SqlColumns = SqlColumns {
+      fielded.columns.map { column =>
+        column.copy(
+          id = group.columnName(columnBaseName.name, column.id)
+        )
+      }
+    }
 
     override def decoder: ResultRowDecoder[T] = fielded.rowDecoder
 

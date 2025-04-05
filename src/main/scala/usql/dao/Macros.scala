@@ -242,13 +242,15 @@ object Macros {
 
     val fields =
       labels.zip(nameAnnotations).zip(typeInfos.infos).zip(groupAnnotations).map {
-        case (((label, nameAnnotation), typeInfo: TypeInfo.Scalar[?]), _)                =>
+        case (((label, nameAnnotation), typeInfo: TypeInfo.Scalar[?]), _)               =>
           val id     = nameAnnotation.map(a => SqlIdentifier.fromString(a.name)).getOrElse(nm.columnToSql(label))
           val column = SqlColumn(id, typeInfo.dataType)
           Field.Column(label, column)
-        case (((label, nameAnnotation), c: TypeInfo.Columnar[?]), maybeColumnAnnotation) =>
-          // TODO: Hack
-          Field.Group(label, c.columnar.asInstanceOf[SqlFielded[?]])
+        case (((label, nameAnnotation), c: TypeInfo.Columnar[?]), maybeGroupAnnotation) =>
+          val groupAnnotation = maybeGroupAnnotation.getOrElse(ColumnGroup())
+          val columnBaseName  =
+            nameAnnotation.map(a => SqlIdentifier.fromString(a.name)).getOrElse(nm.columnToSql(label))
+          Field.Group(label, groupAnnotation, columnBaseName, c.columnar.asInstanceOf[SqlFielded[?]])
       }
     SqlFielded.SimpleSqlFielded(
       fields = fields,
