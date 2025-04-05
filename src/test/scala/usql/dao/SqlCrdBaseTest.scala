@@ -60,7 +60,7 @@ class SqlCrdBaseTest extends TestBaseWithH2 {
   case class WithSubCoords(
       id: Int,
       from: SubCoord,
-      @ColumnGroup("%c_to")
+      @ColumnGroup(ColumnGroupMapping.Pattern("%c_to"))
       to: SubCoord
   ) derives SqlTabular
 

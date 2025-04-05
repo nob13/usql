@@ -15,7 +15,8 @@ object ColumnGroupMapping {
       val applied = pattern
         .replace("%m", fieldName.name)
         .replace("%c", childId.name)
-      SqlIdentifier(applied, quoted = fieldName.quoted || childId.quoted)
+      // Do not take escaping from the field or parent as this can lead to strange situations (still hacky)
+      SqlIdentifier.fromString(applied)
     }
   }
 }

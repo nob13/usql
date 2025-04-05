@@ -15,12 +15,7 @@ case class ColumnName(name: String) extends StaticAnnotation {
 /**
  * Controls the way nested column group names are generated.
  *
- * @param pattern
- *   the name pattern which will be applied. `%m` will be replaced by the member name, %c will be replaced by the child
- *   column name.
+ * @param mapping
+ *   the mapping which will be applied
  */
-case class ColumnGroup(pattern: String = "%m_%c") extends StaticAnnotation {
-
-  /** Mapping for deriving names. */
-  def mapping: ColumnGroupMapping = ColumnGroupMapping.Pattern(pattern)
-}
+case class ColumnGroup(mapping: ColumnGroupMapping = ColumnGroupMapping.Pattern()) extends StaticAnnotation

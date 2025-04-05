@@ -100,12 +100,16 @@ object Field {
   }
 
   /** A Field which maps to a nested case class */
-  case class Group[T](fieldName: String, group: ColumnGroup, columnBaseName: SqlIdentifier, fielded: SqlFielded[T])
-      extends Field[T] {
+  case class Group[T](
+      fieldName: String,
+      mapping: ColumnGroupMapping,
+      columnBaseName: SqlIdentifier,
+      fielded: SqlFielded[T]
+  ) extends Field[T] {
     override def columns: SqlColumns = SqlColumns {
       fielded.columns.map { column =>
         column.copy(
-          id = group.mapping.map(columnBaseName, column.id)
+          id = mapping.map(columnBaseName, column.id)
         )
       }
     }

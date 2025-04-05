@@ -39,9 +39,9 @@ class SqlColumnarTest extends TestBase {
   ) derives SqlColumnar
 
   case class WithNested(
-      @ColumnGroup(pattern = "a_%c")
+      @ColumnGroup(ColumnGroupMapping.Pattern(pattern = "a_%c"))
       a: Nested,
-      @ColumnGroup(pattern = "%c_s")
+      @ColumnGroup(ColumnGroupMapping.Pattern(pattern = "%c_s"))
       b: Nested,
       c: Nested
   ) derives dao.SqlTabular
