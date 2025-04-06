@@ -20,11 +20,10 @@ trait SqlFielded[T] extends SqlColumnar[T] {
   /** Build from field values. */
   protected def build(fieldValues: Seq[Any]): T
 
-  override lazy val columns: SqlColumns = SqlColumns {
+  override lazy val columns: Seq[SqlColumn[?]] =
     fields.flatMap { field =>
-      field.columns.columns
+      field.columns
     }
-  }
 
   override def rowDecoder: ResultRowDecoder[T] = new ResultRowDecoder {
     override def parseRow(offset: Int, row: ResultSet): T = {
@@ -79,7 +78,7 @@ sealed trait Field[T] {
   def fieldName: String
 
   /** Columns represented by this field. */
-  def columns: SqlColumns
+  def columns: Seq[SqlColumn[?]]
 
   /** Decoder for this field. */
   def decoder: ResultRowDecoder[T]
@@ -92,7 +91,7 @@ object Field {
 
   /** A Field which maps to a column */
   case class Column[T](fieldName: String, column: SqlColumn[T]) extends Field[T] {
-    override def columns: SqlColumns = SqlColumns(List(column))
+    override def columns: Seq[SqlColumn[?]] = List(column)
 
     override def decoder: ResultRowDecoder[T] = ResultRowDecoder.forDataType[T](using column.dataType)
 
@@ -106,13 +105,12 @@ object Field {
       columnBaseName: SqlIdentifier,
       fielded: SqlFielded[T]
   ) extends Field[T] {
-    override def columns: SqlColumns = SqlColumns {
+    override def columns: Seq[SqlColumn[?]] =
       fielded.columns.map { column =>
         column.copy(
           id = mapping.map(columnBaseName, column.id)
         )
       }
-    }
 
     override def decoder: ResultRowDecoder[T] = fielded.rowDecoder
 

@@ -35,7 +35,7 @@ class KeyedCrudBaseTest extends TestBaseWithH2 {
 
   it should "properly escape" in {
     UserCrd.tabular.tableName shouldBe SqlIdentifier.fromString("user")
-    UserCrd.tabular.columns.ids shouldBe Seq(
+    UserCrd.tabular.columns.map(_.id) shouldBe Seq(
       "id",
       "name",
       "age"

@@ -12,12 +12,12 @@ class SqlColumnarTest extends TestBase {
 
   "Columnar" should "be derivable" in {
     val columnar = SqlColumnar.derived[Sample]
-    columnar.columns.ids shouldBe Seq(SqlIdentifier.fromString("name"), SqlIdentifier.fromString("age"))
+    columnar.columns.map(_.id) shouldBe Seq(SqlIdentifier.fromString("name"), SqlIdentifier.fromString("age"))
   }
 
   "Tabular" should "be derivable" in {
     val tabular = SqlTabular.derived[Sample]
-    tabular.columns.ids shouldBe Seq(SqlIdentifier.fromString("name"), SqlIdentifier.fromString("age"))
+    tabular.columns.map(_.id) shouldBe Seq(SqlIdentifier.fromString("name"), SqlIdentifier.fromString("age"))
     tabular.tableName shouldBe SqlIdentifier.fromString("sample")
   }
 
@@ -30,7 +30,7 @@ class SqlColumnarTest extends TestBase {
   it should "work with annotations" in {
     val tabular = SqlTabular.derived[SampleWithAnnotations]
     tabular.tableName shouldBe SqlIdentifier.fromString("samplename")
-    tabular.columns.ids shouldBe Seq(SqlIdentifier.fromString("my_name"), SqlIdentifier.fromString("age"))
+    tabular.columns.map(_.id) shouldBe Seq(SqlIdentifier.fromString("my_name"), SqlIdentifier.fromString("age"))
   }
 
   case class Nested(
@@ -50,6 +50,6 @@ class SqlColumnarTest extends TestBase {
     val tabular = SqlTabular.derived[WithNested]
     tabular.parameterFiller.cardinality shouldBe 6
     tabular.rowDecoder.cardinality shouldBe 6
-    tabular.columns.ids shouldBe Seq("a_x", "a_y", "x_s", "y_s", "c_x", "c_y").map(SqlIdentifier.fromString)
+    tabular.columns.map(_.id) shouldBe Seq("a_x", "a_y", "x_s", "y_s", "c_x", "c_y").map(SqlIdentifier.fromString)
   }
 }

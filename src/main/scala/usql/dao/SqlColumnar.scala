@@ -8,10 +8,10 @@ import scala.deriving.Mirror
 trait SqlColumnar[T] {
 
   /** The columns */
-  def columns: SqlColumns
+  def columns: Seq[SqlColumn[?]]
   
   /** Count of columns */
-  def cardinality: Int = columns.count
+  def cardinality: Int = columns.size
 
   /** Decoder for a full row. */
   def rowDecoder: ResultRowDecoder[T]
@@ -36,7 +36,7 @@ object SqlColumnar {
     Macros.buildColumnar[T]
 
   case class SimpleColumnar[T](
-      columns: SqlColumns,
+      columns: Seq[SqlColumn[?]],
       rowDecoder: ResultRowDecoder[T],
       parameterFiller: ParameterFiller[T]
   ) extends SqlColumnar[T]

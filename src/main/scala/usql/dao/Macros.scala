@@ -17,7 +17,7 @@ object Macros {
     val annotations: List[List[Annotation]] = annotationsExtractor[T]
     val typeInfos                           = summonInline[TypeInfos[mirror.MirroredElemTypes]]
 
-    val colums = SqlColumns {
+    val colums =
       labels.zip(annotations).zip(typeInfos.infos).flatMap {
         case ((label, annotations), typeInfo: TypeInfo.Scalar[?]) =>
           val nameAnnotation: Option[ColumnName] = getMaxOneAnnotation(annotations)
@@ -37,7 +37,6 @@ object Macros {
             SqlColumn(columnId, c.dataType)
           }
       }
-    }
 
     // RowDecoder/Parameter filler already handles nested columnar elements
 

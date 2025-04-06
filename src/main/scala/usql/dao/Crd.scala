@@ -56,8 +56,10 @@ abstract class CrdBase[T] extends Crd[T] {
 
   lazy val tabular: SqlTabular[T]
 
-  private lazy val insertStatement =
-    sql"INSERT INTO ${tabular.tableName} (${tabular.columns}) VALUES (${tabular.columns.placeholders})"
+  private lazy val insertStatement = {
+    val placeholders = SqlRawPart(tabular.columns.map(_.id.placeholder.s).mkString(","))
+    sql"INSERT INTO ${tabular.tableName} (${tabular.columns}) VALUES ($placeholders)"
+  }
 
   override def insert(value: T)(using ConnectionProvider): Int = {
     insertStatement.one(value).update.run()
@@ -98,8 +100,10 @@ abstract class KeyedCrudBase[K, T](using keyDataType: DataType[K]) extends CrdBa
 
   override def keyOf(value: T): K
 
-  private lazy val updateStatement =
-    sql"UPDATE ${tabular.tableName} SET ${tabular.columns.namedPlaceholders} WHERE ${keyColumn} = ?"
+  private lazy val updateStatement = {
+    val namedPlaceholders = SqlRawPart(tabular.columns.map(_.id.namedPlaceholder.s).mkString(","))
+    sql"UPDATE ${tabular.tableName} SET $namedPlaceholders WHERE ${keyColumn} = ?"
+  }
 
   override def update(value: T)(using ConnectionProvider): Int = {
     val key = keyOf(value)

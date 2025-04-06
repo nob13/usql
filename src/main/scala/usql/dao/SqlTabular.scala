@@ -31,7 +31,7 @@ object SqlTabular {
 
   case class SimpleTabular[T](
       tableName: SqlIdentifier,
-      columns: SqlColumns,
+      columns: Seq[SqlColumn[?]],
       rowDecoder: ResultRowDecoder[T],
       parameterFiller: ParameterFiller[T]
   ) extends SqlTabular[T]
