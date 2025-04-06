@@ -1,6 +1,6 @@
 package usql.dao
 
-import usql.{DataType, SqlIdentifier, SqlIdentifiers, SqlRawPart}
+import usql.{DataType, SqlIdentifier, SqlRawPart}
 
 /** A Single Column */
 case class SqlColumn[T](
@@ -19,7 +19,7 @@ case class SqlColumns(
   def map[U](f: SqlColumn[?] => U): Seq[U] = columns.map(f)
 
   /** Identifiers of all columns */
-  def ids: SqlIdentifiers = SqlIdentifiers(map(_.id))
+  def ids: Seq[SqlIdentifier] = map(_.id)
 
   /** ?-Placeholders for each identifier */
   def placeholders: SqlRawPart = SqlRawPart(map(_.id.placeholder.s).mkString(","))

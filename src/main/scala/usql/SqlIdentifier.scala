@@ -29,15 +29,6 @@ case class SqlIdentifier(name: String, quoted: Boolean) {
   override def toString: String = serialize
 }
 
-/** Multiple identifiers (e.g. column names) */
-case class SqlIdentifiers(identifiers: Seq[SqlIdentifier]) {
-  def serialize: String = {
-    identifiers.iterator.map(_.serialize).mkString(",")
-  }
-
-  def size: Int = identifiers.size
-}
-
 object SqlIdentifier {
   given stringToIdentifier: Conversion[String, SqlIdentifier] with {
     override def apply(x: String): SqlIdentifier = fromString(x)
@@ -53,11 +44,5 @@ object SqlIdentifier {
         SqlIdentifier(s, quoted = false)
       }
     }
-  }
-}
-
-object SqlIdentifiers {
-  def fromStrings(s: String*): SqlIdentifiers = {
-    new SqlIdentifiers(s.map(SqlIdentifier.fromString))
   }
 }

@@ -1,6 +1,6 @@
 package usql.dao
 
-import usql.{SqlIdentifier, SqlIdentifiers, SqlRawPart}
+import usql.{SqlIdentifier, SqlRawPart}
 
 /** Experimental helper for building aliases used in Join Statements */
 case class Alias[T](

@@ -1,6 +1,6 @@
 package usql.dao
 
-import usql.{SqlIdentifier, SqlIdentifiers}
+import usql.SqlIdentifier
 import usql.util.TestBase
 import usql.profiles.BasicProfile.*
 
@@ -34,9 +34,7 @@ class SqlFieldedTest extends TestBase {
     val adapter = summon[SqlFielded[Person]]
     adapter.fields.map(_.fieldName) shouldBe Seq("id", "name", "age", "coordinate")
     adapter.columns
-      .map(_.id) shouldBe SqlIdentifiers
-      .fromStrings("id", "long_name", "age", "coordinate_x", "coordinate_y")
-      .identifiers
+      .map(_.id) shouldBe Seq("id", "long_name", "age", "coordinate_x", "coordinate_y").map(SqlIdentifier.fromString)
 
     intercept[IllegalStateException] {
       adapter.cols.id

@@ -30,12 +30,12 @@ class SqlInterpolationTest extends TestBase {
     )
     withSingle.sql shouldBe "select * from table1"
 
-    val identifiers     = SqlIdentifiers(
+    val identifiers =
       Seq(
         SqlIdentifier.fromString("a"),
         SqlIdentifier.fromString("b")
       )
-    )
+
     val withIdentifiers = sql"select ${identifiers} from ${identifier} where id = ${2}"
     withIdentifiers shouldBe Sql(
       Seq(

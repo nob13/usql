@@ -41,8 +41,10 @@ object SqlInterpolationParameter {
   }
 
   /** Multiple identifiers. */
-  case class IdentifiersParameter(i: SqlIdentifiers) extends SqlInterpolationParameter {
-    override def replacement: String = i.serialize
+  case class IdentifiersParameter(i: Seq[SqlIdentifier]) extends SqlInterpolationParameter {
+    override def replacement: String = {
+      i.iterator.map(_.serialize).mkString(",")
+    }
   }
 
   /** Some unchecked raw block. */
@@ -64,11 +66,11 @@ object SqlInterpolationParameter {
     new SqlParameter(value, dataType)
   }
 
-  implicit def toIdentifierParameter(i: SqlIdentifier): IdentifierParameter    = IdentifierParameter(i)
-  implicit def toIdentifiersParameter(i: SqlIdentifiers): IdentifiersParameter = IdentifiersParameter(i)
-  implicit def columnsParameter(c: SqlColumns): IdentifiersParameter           = IdentifiersParameter(c.ids)
-  implicit def rawBlockParameter(rawPart: SqlRawPart): RawBlockParameter       = RawBlockParameter(rawPart.s)
-  implicit def innerSql(sql: Sql): InnerSql                                    = InnerSql(sql)
+  implicit def toIdentifierParameter(i: SqlIdentifier): IdentifierParameter        = IdentifierParameter(i)
+  implicit def toIdentifiersParameter(i: Seq[SqlIdentifier]): IdentifiersParameter = IdentifiersParameter(i)
+  implicit def columnsParameter(c: SqlColumns): IdentifiersParameter               = IdentifiersParameter(c.ids)
+  implicit def rawBlockParameter(rawPart: SqlRawPart): RawBlockParameter           = RawBlockParameter(rawPart.s)
+  implicit def innerSql(sql: Sql): InnerSql                                        = InnerSql(sql)
 }
 
 /** Something which can be added to sql""-interpolation without further checking. */
