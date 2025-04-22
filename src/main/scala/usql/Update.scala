@@ -16,7 +16,7 @@ case class Update(sql: SqlBase) {
   /**
    * Run the update statement and get generated values. See [[java.sql.PreparedStatement.getGeneratedKeys()]]
    */
-  def runAndGetGenerated[T]()(using d: ResultRowDecoder[T], c: ConnectionProvider): T = {
+  def runAndGetGenerated[T]()(using d: RowDecoder[T], c: ConnectionProvider): T = {
     given sp: StatementPreparator = StatementPreparator.withGeneratedKeys
     sql.withPreparedStatement { statement =>
       statement.executeUpdate()

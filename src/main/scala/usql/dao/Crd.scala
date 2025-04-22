@@ -50,9 +50,9 @@ trait KeyedCrud[T] extends Crd[T] {
 /** Implementation of Crd for Tabular data. */
 abstract class CrdBase[T] extends Crd[T] {
 
-  protected given pf: ParameterFiller[T] = tabular.parameterFiller
+  protected given pf: RowEncoder[T] = tabular.rowEncoder
 
-  protected given rd: ResultRowDecoder[T] = tabular.rowDecoder
+  protected given rd: RowDecoder[T] = tabular.rowDecoder
 
   /**
    * Define the referenced tabular, usually implemented using `summon`. We would like to have it as a parameter, but

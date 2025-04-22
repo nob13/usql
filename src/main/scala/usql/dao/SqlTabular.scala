@@ -1,6 +1,6 @@
 package usql.dao
 
-import usql.{ParameterFiller, ResultRowDecoder, SqlIdentifier}
+import usql.{RowEncoder, RowDecoder, SqlIdentifier}
 
 import scala.deriving.Mirror
 

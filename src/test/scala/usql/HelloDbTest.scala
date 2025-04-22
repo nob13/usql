@@ -18,12 +18,11 @@ class HelloDbTest extends TestBaseWithH2 {
     sql"""INSERT INTO "user" (id, name) VALUES (${1}, ${"Hello World"})""".update.run()
     sql"""INSERT INTO "user" (id, name) VALUES (${3}, ${"How are you?"})""".update.run()
 
-    // implicitly[ResultRowParser[EmptyTuple]]
     withClue("it should be possible to build various result row parsers") {
-      summon[ResultRowDecoder[EmptyTuple]]
-      summon[ResultRowDecoder[Int *: EmptyTuple]]
-      summon[ResultRowDecoder[Int]]
-      summon[ResultRowDecoder[(Int, String)]]
+      summon[RowDecoder[EmptyTuple]]
+      summon[RowDecoder[Int *: EmptyTuple]]
+      summon[RowDecoder[Int]]
+      summon[RowDecoder[(Int, String)]]
     }
 
     sql"""SELECT id, name FROM "user" WHERE id=${1}""".query.one[(Int, String)]() shouldBe Some(1 -> "Hello World")

@@ -19,12 +19,12 @@ trait SqlBase {
   }
 
   /** Turns into a update on one value set. */
-  def one[T](value: T)(using p: ParameterFiller[T]): AppliedSql[T] = {
+  def one[T](value: T)(using p: RowEncoder[T]): AppliedSql[T] = {
     AppliedSql(this, value, p)
   }
 
   /** Turns into a batch operation */
-  def batch[T](values: Iterable[T])(using p: ParameterFiller[T]): Batch[T] = {
+  def batch[T](values: Iterable[T])(using p: RowEncoder[T]): Batch[T] = {
     Batch(this, values, p)
   }
 
@@ -57,12 +57,12 @@ object StatementPreparator {
 }
 
 /** With supplied arguments */
-case class AppliedSql[T](base: SqlBase, parameter: T, parameterFiller: ParameterFiller[T]) extends SqlBase {
+case class AppliedSql[T](base: SqlBase, parameter: T, rowEncoder: RowEncoder[T]) extends SqlBase {
   override def withPreparedStatement[T](
       f: PreparedStatement => T
   )(using cp: ConnectionProvider, sp: StatementPreparator): T = {
     base.withPreparedStatement { ps =>
-      parameterFiller.fill(ps, parameter)
+      rowEncoder.fill(ps, parameter)
       f(ps)
     }
   }

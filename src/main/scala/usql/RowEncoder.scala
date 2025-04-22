@@ -5,7 +5,7 @@ import usql.dao.SqlColumnar
 import java.sql.PreparedStatement
 
 /** Responsible for filling arguments into prepared statements for batch operations. */
-trait ParameterFiller[T] {
+trait RowEncoder[T] {
 
   /** Fill something at the zero-based position index into the prepared statement. */
   def fill(offset: Int, ps: PreparedStatement, value: T): Unit
@@ -18,9 +18,9 @@ trait ParameterFiller[T] {
   /** Fill at position 0 */
   def fill(ps: PreparedStatement, value: T): Unit = fill(0, ps, value)
 
-  def contraMap[U](f: U => T): ParameterFiller[U] = {
+  def contraMap[U](f: U => T): RowEncoder[U] = {
     val me = this
-    new ParameterFiller[U] {
+    new RowEncoder[U] {
       override def fill(offset: Int, ps: PreparedStatement, value: U): Unit = me.fill(offset, ps, f(value))
 
       override def cardinality: Int = me.cardinality
@@ -31,12 +31,12 @@ trait ParameterFiller[T] {
   def cardinality: Int
 }
 
-object ParameterFiller {
+object RowEncoder {
 
   given forTuple[H, T <: Tuple](
-      using headFiller: ParameterFiller[H],
-      tailFiller: ParameterFiller[T]
-  ): ParameterFiller[H *: T] = new ParameterFiller[H *: T] {
+      using headFiller: RowEncoder[H],
+      tailFiller: RowEncoder[T]
+  ): RowEncoder[H *: T] = new RowEncoder[H *: T] {
     override def fill(offset: Int, ps: PreparedStatement, value: H *: T): Unit = {
       headFiller.fill(offset, ps, value.head)
       tailFiller.fill(offset + headFiller.cardinality, ps, value.tail)
@@ -47,17 +47,17 @@ object ParameterFiller {
     }
   }
 
-  given empty: ParameterFiller[EmptyTuple] = new ParameterFiller[EmptyTuple] {
+  given empty: RowEncoder[EmptyTuple] = new RowEncoder[EmptyTuple] {
     override def fill(offset: Int, ps: PreparedStatement, value: EmptyTuple): Unit = ()
 
     override def cardinality: Int = 0
   }
 
-  given forDataType[T](using dt: DataType[T]): ParameterFiller[T] = new ParameterFiller[T] {
+  given forDataType[T](using dt: DataType[T]): RowEncoder[T] = new RowEncoder[T] {
     override def fill(offset: Int, ps: PreparedStatement, value: T): Unit = dt.fillByZeroBasedIdx(offset, ps, value)
 
     override def cardinality: Int = 1
   }
 
-  given forColumnar[T](using c: SqlColumnar[T]): ParameterFiller[T] = c.parameterFiller
+  given forColumnar[T](using c: SqlColumnar[T]): RowEncoder[T] = c.rowEncoder
 }

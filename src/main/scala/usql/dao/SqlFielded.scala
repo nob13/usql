@@ -1,6 +1,6 @@
 package usql.dao
 
-import usql.{ParameterFiller, ResultRowDecoder, SqlIdentifier}
+import usql.{RowEncoder, RowDecoder, SqlIdentifier}
 
 import java.sql.{PreparedStatement, ResultSet}
 import scala.deriving.Mirror
@@ -25,7 +25,7 @@ trait SqlFielded[T] extends SqlColumnar[T] {
       field.columns
     }
 
-  override def rowDecoder: ResultRowDecoder[T] = new ResultRowDecoder {
+  override def rowDecoder: RowDecoder[T] = new RowDecoder {
     override def parseRow(offset: Int, row: ResultSet): T = {
       val fieldValues   = Seq.newBuilder[Any]
       var currentOffset = offset
@@ -39,7 +39,7 @@ trait SqlFielded[T] extends SqlColumnar[T] {
     override def cardinality: Int = SqlFielded.this.cardinality
   }
 
-  override def parameterFiller: ParameterFiller[T] = new ParameterFiller[T] {
+  override def rowEncoder: RowEncoder[T] = new RowEncoder[T] {
     override def fill(offset: Int, ps: PreparedStatement, value: T): Unit = {
       var currentOffset = offset
       val fieldValues   = split(value)
@@ -81,10 +81,10 @@ sealed trait Field[T] {
   def columns: Seq[SqlColumn[?]]
 
   /** Decoder for this field. */
-  def decoder: ResultRowDecoder[T]
+  def decoder: RowDecoder[T]
 
   /** Filler for this field. */
-  def filler: ParameterFiller[T]
+  def filler: RowEncoder[T]
 }
 
 object Field {
@@ -93,9 +93,9 @@ object Field {
   case class Column[T](fieldName: String, column: SqlColumn[T]) extends Field[T] {
     override def columns: Seq[SqlColumn[?]] = List(column)
 
-    override def decoder: ResultRowDecoder[T] = ResultRowDecoder.forDataType[T](using column.dataType)
+    override def decoder: RowDecoder[T] = RowDecoder.forDataType[T](using column.dataType)
 
-    override def filler: ParameterFiller[T] = ParameterFiller.forDataType[T](using column.dataType)
+    override def filler: RowEncoder[T] = RowEncoder.forDataType[T](using column.dataType)
   }
 
   /** A Field which maps to a nested case class */
@@ -112,8 +112,8 @@ object Field {
         )
       }
 
-    override def decoder: ResultRowDecoder[T] = fielded.rowDecoder
+    override def decoder: RowDecoder[T] = fielded.rowDecoder
 
-    override def filler: ParameterFiller[T] = fielded.parameterFiller
+    override def filler: RowEncoder[T] = fielded.rowEncoder
   }
 }

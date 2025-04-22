@@ -174,8 +174,8 @@ println(Person.findByKey(6)) // Person(6, Franziska)
 # Core Types
 
 - `DataType` a type class which derives how to fetch a Type `T` from a `ResultSet` and how to store it in a `PreparedStatement`
-- `ResultRowDecoder` type class for fetching tuples / values from `ResultSet`
-- `ParameterFiller` type class for filling tuples / values into a `PreparedStatement`
+- `RowDecoder` type class for fetching tuples / values from `ResultSet`
+- `RowEncoder` type class for filling tuples / values into a `PreparedStatement`
 - `SqlIdentifier` an SQL identifier, quoted if necessary.
 - `RawSql` Raw SQL Queries
 - `Sql` interpolated SQL Queries

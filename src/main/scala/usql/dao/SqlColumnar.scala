@@ -1,6 +1,6 @@
 package usql.dao
 
-import usql.{ParameterFiller, ResultRowDecoder}
+import usql.{RowEncoder, RowDecoder}
 
 import scala.deriving.Mirror
 
@@ -18,8 +18,8 @@ trait SqlColumnar[T] {
   def cardinality: Int = columns.size
 
   /** Decoder for a full row. */
-  def rowDecoder: ResultRowDecoder[T]
+  def rowDecoder: RowDecoder[T]
 
   /** Filler for a full row. */
-  def parameterFiller: ParameterFiller[T]
+  def rowEncoder: RowEncoder[T]
 }
