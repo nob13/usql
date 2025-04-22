@@ -54,7 +54,7 @@ class SqlCrdBaseTest extends TestBaseWithH2 {
     CoordinateCrd.findAll() shouldBe empty
   }
 
-  case class SubCoord(x: Double, y: Double) derives SqlColumnar
+  case class SubCoord(x: Double, y: Double) derives SqlFielded
 
   @TableName("subcoord")
   case class WithSubCoords(

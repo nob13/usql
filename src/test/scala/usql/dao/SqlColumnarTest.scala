@@ -10,11 +10,6 @@ class SqlColumnarTest extends TestBase {
       age: Int
   )
 
-  "Columnar" should "be derivable" in {
-    val columnar = SqlColumnar.derived[Sample]
-    columnar.columns.map(_.id) shouldBe Seq(SqlIdentifier.fromString("name"), SqlIdentifier.fromString("age"))
-  }
-
   "Tabular" should "be derivable" in {
     val tabular = SqlTabular.derived[Sample]
     tabular.columns.map(_.id) shouldBe Seq(SqlIdentifier.fromString("name"), SqlIdentifier.fromString("age"))
@@ -31,25 +26,5 @@ class SqlColumnarTest extends TestBase {
     val tabular = SqlTabular.derived[SampleWithAnnotations]
     tabular.tableName shouldBe SqlIdentifier.fromString("samplename")
     tabular.columns.map(_.id) shouldBe Seq(SqlIdentifier.fromString("my_name"), SqlIdentifier.fromString("age"))
-  }
-
-  case class Nested(
-      x: Double,
-      y: Double
-  ) derives SqlColumnar
-
-  case class WithNested(
-      @ColumnGroup(ColumnGroupMapping.Pattern(pattern = "a_%c"))
-      a: Nested,
-      @ColumnGroup(ColumnGroupMapping.Pattern(pattern = "%c_s"))
-      b: Nested,
-      c: Nested
-  ) derives dao.SqlTabular
-
-  it should "work for nested" in {
-    val tabular = SqlTabular.derived[WithNested]
-    tabular.parameterFiller.cardinality shouldBe 6
-    tabular.rowDecoder.cardinality shouldBe 6
-    tabular.columns.map(_.id) shouldBe Seq("a_x", "a_y", "x_s", "y_s", "c_x", "c_y").map(SqlIdentifier.fromString)
   }
 }

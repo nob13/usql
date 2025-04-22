@@ -1,6 +1,6 @@
 package usql.dao
 
-import usql.{DataType, ParameterFiller, ResultRowDecoder, SqlIdentifier}
+import usql.{ParameterFiller, ResultRowDecoder}
 
 import scala.deriving.Mirror
 
@@ -22,13 +22,4 @@ trait SqlColumnar[T] {
 
   /** Filler for a full row. */
   def parameterFiller: ParameterFiller[T]
-}
-
-object SqlColumnar {
-  inline def derived[T <: Product](
-      using m: Mirror.ProductOf[T],
-      nameMapper: NameMapping = NameMapping.Default
-  ): SqlColumnar[T] = {
-    SqlFielded.derived[T]
-  }
 }
