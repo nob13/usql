@@ -54,6 +54,10 @@ abstract class CrdBase[T] extends Crd[T] {
 
   protected given rd: ResultRowDecoder[T] = tabular.rowDecoder
 
+  /**
+   * Define the referenced tabular, usually implemented using `summon`. We would like to have it as a parameter, but
+   * this leads to this error https://github.com/scala/scala3/issues/22704 even when using lazy parameters.
+   */
   lazy val tabular: SqlTabular[T]
 
   private lazy val insertStatement = {
