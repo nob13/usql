@@ -18,9 +18,8 @@ class SqlFieldedTest extends TestBase {
       age: Option[Int],
       @ColumnGroup
       coordinate: Coordinate
-  ) derives SqlFielded
+  ) derives SqlTabular
 
-  /*
   object Person extends KeyedCrudBase[Int, Person] {
     override val keyColumn: SqlIdentifier = "id"
 
@@ -28,7 +27,6 @@ class SqlFieldedTest extends TestBase {
 
     override lazy val tabular: SqlTabular[Person] = summon
   }
-   */
 
   it should "work" in {
     val adapter = summon[SqlFielded[Person]]
@@ -40,6 +38,9 @@ class SqlFieldedTest extends TestBase {
       adapter.cols.id
     }
     adapter.cols.name.id shouldBe SqlIdentifier.fromString("long_name")
+    Person.cols.name.id shouldBe SqlIdentifier.fromString("long_name")
+
     adapter.cols.coordinate.x.id shouldBe SqlIdentifier.fromString("coordinate_x")
+    Person.cols.coordinate.x.id shouldBe SqlIdentifier.fromString("coordinate_x")
   }
 }

@@ -15,10 +15,10 @@ trait SqlFielded[T] extends SqlColumnar[T] {
   def cols: ColumnPath[T] = ColumnPath(this, Nil)
 
   /** Split an instance into its fields */
-  protected def split(value: T): Seq[Any]
+  protected[dao] def split(value: T): Seq[Any]
 
   /** Build from field values. */
-  protected def build(fieldValues: Seq[Any]): T
+  protected[dao] def build(fieldValues: Seq[Any]): T
 
   override lazy val columns: Seq[SqlColumn[?]] =
     fields.flatMap { field =>
@@ -61,9 +61,9 @@ object SqlFielded {
       splitter: T => List[Any],
       builder: List[Any] => T
   ) extends SqlFielded[T] {
-    override protected def split(value: T): Seq[Any] = splitter(value)
+    override protected[dao] def split(value: T): Seq[Any] = splitter(value)
 
-    override protected def build(fieldValues: Seq[Any]): T = builder(fieldValues.toList)
+    override protected[dao] def build(fieldValues: Seq[Any]): T = builder(fieldValues.toList)
   }
 
   inline def derived[T <: Product: Mirror.ProductOf](using nm: NameMapping = NameMapping.Default): SqlFielded[T] =

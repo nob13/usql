@@ -9,47 +9,6 @@ import scala.quoted.{Expr, Quotes, Type}
 import scala.reflect.ClassTag
 
 object Macros {
-  inline def buildColumnar[T <: Product](
-      using nm: NameMapping,
-      mirror: Mirror.ProductOf[T]
-  ): SqlColumnar.SimpleColumnar[T] = {
-    val labels: List[String]                = deriveLabels[T]
-    val annotations: List[List[Annotation]] = annotationsExtractor[T]
-    val typeInfos                           = summonInline[TypeInfos[mirror.MirroredElemTypes]]
-
-    val colums =
-      labels.zip(annotations).zip(typeInfos.infos).flatMap {
-        case ((label, annotations), typeInfo: TypeInfo.Scalar[?]) =>
-          val nameAnnotation: Option[ColumnName] = getMaxOneAnnotation(annotations)
-
-          val id = nameAnnotation.map(a => SqlIdentifier.fromString(a.name)).getOrElse(nm.columnToSql(label))
-          Some(
-            SqlColumn(id, typeInfo.dataType)
-          )
-        case ((label, annotations), c: TypeInfo.Columnar[?])      =>
-          val nameAnnotation: Option[ColumnName]        = getMaxOneAnnotation(annotations)
-          val maybeGroupAnnotation: Option[ColumnGroup] = getMaxOneAnnotation(annotations)
-          val nameMapping                               = maybeGroupAnnotation.map(_.mapping).getOrElse(ColumnGroupMapping.Pattern())
-
-          val memberName: SqlIdentifier = nameAnnotation.map(_.id).getOrElse(nm.columnToSql(label))
-          c.columnar.columns.map { c =>
-            val columnId = nameMapping.map(memberName, c.id)
-            SqlColumn(columnId, c.dataType)
-          }
-      }
-
-    // RowDecoder/Parameter filler already handles nested columnar elements
-
-    val rowDecoder      = summonInline[ResultRowDecoder[mirror.MirroredElemTypes]].map(mirror.fromTuple)
-    val parameterFiller =
-      summonInline[ParameterFiller[mirror.MirroredElemTypes]].contraMap[T](x => Tuple.fromProductTyped(x)(using mirror))
-
-    SqlColumnar.SimpleColumnar(
-      columns = colums,
-      rowDecoder = rowDecoder,
-      parameterFiller = parameterFiller
-    )
-  }
 
   def getMaxOneAnnotation[T: ClassTag](in: List[Annotation]): Option[T] = {
     in.collect { case a: T =>
@@ -90,7 +49,7 @@ object Macros {
   }
 
   inline def buildTabular[T <: Product](using nm: NameMapping, mirror: Mirror.ProductOf[T]): SqlTabular[T] = {
-    val columnar = buildColumnar[T]
+    val fielded = buildFielded[T]
 
     val tableName: SqlIdentifier = tableNameAnnotation[T]
       .map { tn =>
@@ -102,9 +61,7 @@ object Macros {
 
     SqlTabular.SimpleTabular(
       tableName = tableName,
-      columnar.columns,
-      columnar.rowDecoder,
-      columnar.parameterFiller
+      fielded = fielded
     )
   }
 

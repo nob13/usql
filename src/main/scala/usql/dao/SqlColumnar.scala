@@ -4,12 +4,16 @@ import usql.{DataType, ParameterFiller, ResultRowDecoder, SqlIdentifier}
 
 import scala.deriving.Mirror
 
-/** Encapsulates column data and codecs for a product type. */
+/**
+ * Encapsulates column data and codecs for a product type.
+ *
+ * Note: for case classes, this is usually presented by [[SqlFielded]]
+ */
 trait SqlColumnar[T] {
 
   /** The columns */
   def columns: Seq[SqlColumn[?]]
-  
+
   /** Count of columns */
   def cardinality: Int = columns.size
 
@@ -21,23 +25,10 @@ trait SqlColumnar[T] {
 }
 
 object SqlColumnar {
-
-  /**
-   * Derive an instance for a case class.
-   *
-   * Use [[ColumnName]] to control column names.
-   *
-   * Use [[ColumnGroup]] to control column names of nested column groups.
-   *
-   * @param nm
-   *   name mapping strategy.
-   */
-  inline def derived[T <: Product: Mirror.ProductOf](using nm: NameMapping = NameMapping.Default): SqlColumnar[T] =
-    Macros.buildColumnar[T]
-
-  case class SimpleColumnar[T](
-      columns: Seq[SqlColumn[?]],
-      rowDecoder: ResultRowDecoder[T],
-      parameterFiller: ParameterFiller[T]
-  ) extends SqlColumnar[T]
+  inline def derived[T <: Product](
+      using m: Mirror.ProductOf[T],
+      nameMapper: NameMapping = NameMapping.Default
+  ): SqlColumnar[T] = {
+    SqlFielded.derived[T]
+  }
 }

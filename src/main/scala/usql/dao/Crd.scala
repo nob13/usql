@@ -60,6 +60,9 @@ abstract class CrdBase[T] extends Crd[T] {
    */
   lazy val tabular: SqlTabular[T]
 
+  /** Gives access to the columns */
+  def cols: ColumnPath[T] = tabular.cols
+
   private lazy val insertStatement = {
     val placeholders = SqlRawPart(tabular.columns.map(_.id.placeholder.s).mkString(","))
     sql"INSERT INTO ${tabular.tableName} (${tabular.columns}) VALUES ($placeholders)"

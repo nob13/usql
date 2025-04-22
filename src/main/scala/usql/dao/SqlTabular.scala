@@ -5,7 +5,7 @@ import usql.{ParameterFiller, ResultRowDecoder, SqlIdentifier}
 import scala.deriving.Mirror
 
 /** Maps some thing to a whole table */
-trait SqlTabular[T] extends SqlColumnar[T] {
+trait SqlTabular[T] extends SqlFielded[T] {
 
   /** Name of the table. */
   def tableName: SqlIdentifier
@@ -31,8 +31,12 @@ object SqlTabular {
 
   case class SimpleTabular[T](
       tableName: SqlIdentifier,
-      columns: Seq[SqlColumn[?]],
-      rowDecoder: ResultRowDecoder[T],
-      parameterFiller: ParameterFiller[T]
-  ) extends SqlTabular[T]
+      fielded: SqlFielded[T]
+  ) extends SqlTabular[T] {
+    override def fields: Seq[Field[_]] = fielded.fields
+
+    override protected[dao] def split(value: T): Seq[Any] = fielded.split(value)
+
+    override protected[dao] def build(fieldValues: Seq[Any]): T = fielded.build(fieldValues)
+  }
 }
