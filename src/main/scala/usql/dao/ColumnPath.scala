@@ -22,14 +22,15 @@ object ColumnPath {
     def id: SqlIdentifier
   }
 
-  case class FieldedWalker(model: SqlFielded[?]) extends Walker {
+  case class FieldedWalker(model: SqlFielded[?], mapping: SqlIdentifier => SqlIdentifier = identity) extends Walker {
     override def select(field: String): Walker = {
       model.fields
         .collectFirst {
           case f: Field.Column[?] if f.fieldName == field =>
-            ColumnWalker(f)
+            ColumnWalker(f, mapping)
           case f: Field.Group[?] if f.fieldName == field  =>
-            FieldedWalker(f.fielded)
+            val subMapping: SqlIdentifier => SqlIdentifier = in => mapping(f.mapping.map(f.columnBaseName, in))
+            FieldedWalker(f.fielded, subMapping)
         }
         .getOrElse {
           throw new IllegalStateException(s"Can not fiend field nane ${field}")
@@ -41,11 +42,11 @@ object ColumnPath {
     }
   }
 
-  case class ColumnWalker(column: Field.Column[?]) extends Walker {
+  case class ColumnWalker(column: Field.Column[?], mapping: SqlIdentifier => SqlIdentifier = identity) extends Walker {
     override def select(field: String): Walker = {
       throw new IllegalStateException(s"Can walk further column")
     }
 
-    override def id: SqlIdentifier = column.column.id
+    override def id: SqlIdentifier = mapping(column.column.id)
   }
 }
