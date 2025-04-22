@@ -8,6 +8,8 @@ easy to write more Profiles).
 
 ## Installation
 
+You need Scala 3.7.0
+
 Add to build.sbt
 
 ```scala

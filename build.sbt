@@ -6,7 +6,7 @@ val versionTag = sys.env
   .filter(_.startsWith("v"))
   .map(_.stripPrefix("v"))
 
-val snapshotVersion = "0.2-SNAPSHOT"
+val snapshotVersion = "0.3-SNAPSHOT"
 val artefactVersion = versionTag.getOrElse(snapshotVersion)
 
 ThisBuild / scalacOptions ++= Seq("-feature")
