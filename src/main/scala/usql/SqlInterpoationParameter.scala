@@ -1,6 +1,6 @@
 package usql
 
-import usql.dao.{ColumnPath, SqlColumn}
+import usql.dao.{Alias, ColumnPath, Crd, CrdBase, SqlColumn}
 
 import scala.language.implicitConversions
 
@@ -72,7 +72,11 @@ object SqlInterpolationParameter {
   implicit def columnsParameter(c: Seq[SqlColumn[?]]): IdentifiersParameter        = IdentifiersParameter(c.map(_.id))
   implicit def rawBlockParameter(rawPart: SqlRawPart): RawBlockParameter           = RawBlockParameter(rawPart.s)
   implicit def innerSql(sql: Sql): InnerSql                                        = InnerSql(sql)
-  implicit def columnPath(columnPath: ColumnPath[?]): IdentifierParameter          = IdentifierParameter(columnPath.id)
+  implicit def columnPath(columnPath: ColumnPath[?]): IdentifierParameter          = IdentifierParameter(columnPath.buildIdentifier)
+  implicit def alias(alias: Alias[?]): RawBlockParameter                           = RawBlockParameter(
+    s"${alias.tabular.tableName} ${alias.aliasName}"
+  )
+  implicit def crd(crd: CrdBase[?]): RawBlockParameter                             = RawBlockParameter(s"${crd.tabular.tableName}")
 }
 
 /** Something which can be added to sql""-interpolation without further checking. */

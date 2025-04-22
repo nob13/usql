@@ -2,6 +2,9 @@ package usql.dao
 
 import usql.SqlIdentifier
 
+/**
+ * Helper for going through the field path of SqlFielded.
+ */
 case class ColumnPath[T](root: SqlFielded[?], fields: List[String], alias: Option[String] = None) extends Selectable {
   type Fields = NamedTuple.Map[NamedTuple.From[T], ColumnPath]
 
@@ -9,7 +12,7 @@ case class ColumnPath[T](root: SqlFielded[?], fields: List[String], alias: Optio
     ColumnPath(root, name :: fields, alias)
   }
 
-  def id: SqlIdentifier = {
+  def buildIdentifier: SqlIdentifier = {
     val reversed = fields.reverse
     val walked   = reversed.foldLeft(ColumnPath.FieldedWalker(root): ColumnPath.Walker)(_.select(_))
     walked.id.copy(alias = alias)
@@ -17,6 +20,7 @@ case class ColumnPath[T](root: SqlFielded[?], fields: List[String], alias: Optio
 }
 
 object ColumnPath {
+
   trait Walker {
     def select(field: String): Walker
     def id: SqlIdentifier

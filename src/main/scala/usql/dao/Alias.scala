@@ -24,9 +24,4 @@ case class Alias[T](
 
   /** Access to aliased cols. */
   def col: ColumnPath[T] = ColumnPath(tabular, Nil, alias = Some(aliasName))
-
-  /** Refers to the aliased table. */
-  def table: SqlRawPart = {
-    SqlRawPart(tabular.tableName.serialize + " " + aliasName)
-  }
 }

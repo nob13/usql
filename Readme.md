@@ -3,8 +3,8 @@
 usql is a small jdbc wrapper to automate recurring patterns and
 to simplify writing SQL typical Actions in the age of direct style scala.
 
-Note: this is Beta software. Only Postgres and H2 are supported yet (altough it's 
-easy wo write more Profiles).
+Note: this is Beta software. Only Postgres and H2 are supported yet (although it's 
+easy to write more Profiles).
 
 ## Installation
 
@@ -169,6 +169,16 @@ println(s"All Persons: ${Person.findAll()}")
 Person.insert(Person(6, "Fritz"))
 Person.update(Person(6, "Franziska"))
 println(Person.findByKey(6)) // Person(6, Franziska)
+```
+
+## Scala 3.7.0+ Named Tuples
+
+```scala3
+// Person.col.id will be automatically checked.
+val allAgain: Vector[(Int, String)] =
+  sql"SELECT ${Person.cols.id}, ${Person.cols.name} FROM ${Person}".query.all[(Int, String)]()
+
+println(s"allAgain=${allAgain}")
 ```
 
 # Core Types

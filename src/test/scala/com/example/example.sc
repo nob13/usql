@@ -2,7 +2,6 @@ import usql.*
 import usql.dao.*
 import usql.profiles.H2Profile.given
 
-
 import java.sql.{Connection, DriverManager}
 import scala.util.{Try, Using}
 
@@ -86,3 +85,10 @@ println(s"All Persons: ${Person.findAll()}")
 Person.insert(Person(6, "Fritz"))
 Person.update(Person(6, "Franziska"))
 println(Person.findByKey(6)) // Person(6, Franziska)
+
+// Simple Queries (using Scala 3.7.0+ Named Tuples)
+
+val allAgain: Vector[(Int, String)] =
+  sql"SELECT ${Person.cols.id}, ${Person.cols.name} FROM ${Person}".query.all[(Int, String)]()
+
+println(s"allAgain=${allAgain}")

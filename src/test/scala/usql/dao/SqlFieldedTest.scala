@@ -35,12 +35,12 @@ class SqlFieldedTest extends TestBase {
       .map(_.id) shouldBe Seq("id", "long_name", "age", "coordinate_x", "coordinate_y").map(SqlIdentifier.fromString)
 
     intercept[IllegalStateException] {
-      adapter.cols.id
+      adapter.cols.buildIdentifier
     }
-    adapter.cols.name.id shouldBe SqlIdentifier.fromString("long_name")
-    Person.cols.name.id shouldBe SqlIdentifier.fromString("long_name")
+    adapter.cols.name.buildIdentifier shouldBe SqlIdentifier.fromString("long_name")
+    Person.cols.name.buildIdentifier shouldBe SqlIdentifier.fromString("long_name")
 
-    adapter.cols.coordinate.x.id shouldBe SqlIdentifier.fromString("coordinate_x")
-    Person.cols.coordinate.x.id shouldBe SqlIdentifier.fromString("coordinate_x")
+    adapter.cols.coordinate.x.buildIdentifier shouldBe SqlIdentifier.fromString("coordinate_x")
+    Person.cols.coordinate.x.buildIdentifier shouldBe SqlIdentifier.fromString("coordinate_x")
   }
 }
