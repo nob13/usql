@@ -4,7 +4,7 @@ import usql.{DataType, ParameterFiller, ResultRowDecoder, SqlIdentifier}
 
 import scala.deriving.Mirror
 
-/** Encapsulates column data and codecs for a product type */
+/** Encapsulates column data and codecs for a product type. */
 trait SqlColumnar[T] {
 
   /** The columns */
