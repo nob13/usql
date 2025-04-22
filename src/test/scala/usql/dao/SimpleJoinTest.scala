@@ -67,8 +67,8 @@ class SimpleJoinTest extends TestBaseWithH2 {
     Level.insert(level3)
   }
 
-  val person = Alias("p", Person.tabular)
-  val level  = Alias("l", Level.tabular)
+  val person = Person.alias("p")
+  val level  = Level.alias("l")
 
   it should "do an easy inner join" in new Env {
     val joined =
@@ -95,5 +95,14 @@ class SimpleJoinTest extends TestBaseWithH2 {
       (person3, Some(level2)),
       (person4, None)
     )
+  }
+
+  it should "provide access to aliased column names" in new Env {
+    person.col.name.id.toString shouldBe "p.name"
+    val selected =
+      sql"""
+          SELECT ${person.col.name} FROM ${person.table}
+         """.query.all[String]()
+    selected should contain theSameElementsAs Person.findAll().map(_.name)
   }
 }

@@ -2,17 +2,17 @@ package usql.dao
 
 import usql.SqlIdentifier
 
-case class ColumnPath[T](root: SqlFielded[?], fields: List[String]) extends Selectable {
+case class ColumnPath[T](root: SqlFielded[?], fields: List[String], alias: Option[String] = None) extends Selectable {
   type Fields = NamedTuple.Map[NamedTuple.From[T], ColumnPath]
 
   def selectDynamic(name: String): ColumnPath[?] = {
-    ColumnPath(root, name :: fields)
+    ColumnPath(root, name :: fields, alias)
   }
 
   def id: SqlIdentifier = {
     val reversed = fields.reverse
     val walked   = reversed.foldLeft(ColumnPath.FieldedWalker(root): ColumnPath.Walker)(_.select(_))
-    walked.id
+    walked.id.copy(alias = alias)
   }
 }
 

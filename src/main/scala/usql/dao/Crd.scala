@@ -60,6 +60,9 @@ abstract class CrdBase[T] extends Crd[T] {
    */
   lazy val tabular: SqlTabular[T]
 
+  /** Gives access to an aliased view. */
+  def alias(name: String): Alias[T] = tabular.alias(name)
+
   /** Gives access to the columns */
   def cols: ColumnPath[T] = tabular.cols
 

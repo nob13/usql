@@ -1,6 +1,6 @@
 package usql
 
-import usql.dao.SqlColumn
+import usql.dao.{ColumnPath, SqlColumn}
 
 import scala.language.implicitConversions
 
@@ -72,6 +72,7 @@ object SqlInterpolationParameter {
   implicit def columnsParameter(c: Seq[SqlColumn[?]]): IdentifiersParameter        = IdentifiersParameter(c.map(_.id))
   implicit def rawBlockParameter(rawPart: SqlRawPart): RawBlockParameter           = RawBlockParameter(rawPart.s)
   implicit def innerSql(sql: Sql): InnerSql                                        = InnerSql(sql)
+  implicit def columnPath(columnPath: ColumnPath[?]): IdentifierParameter          = IdentifierParameter(columnPath.id)
 }
 
 /** Something which can be added to sql""-interpolation without further checking. */

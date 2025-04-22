@@ -8,16 +8,24 @@ package usql
  *   if true, the identifier will be quoted.
  */
 @throws[IllegalArgumentException]("If name contains a \"")
-case class SqlIdentifier(name: String, quoted: Boolean) {
+case class SqlIdentifier(name: String, quoted: Boolean, alias: Option[String] = None) {
   require(!name.contains("\""), "Identifiers may not contain \"")
 
   /** Serialize the identifier. */
   def serialize: String = {
-    if quoted then {
-      "\"" + name + "\""
-    } else {
-      name
+    val sb = StringBuilder()
+    alias.foreach { alias =>
+      sb ++= alias
+      sb += '.'
     }
+    if quoted then {
+      sb += '"'
+    }
+    sb ++= name
+    if quoted then {
+      sb += '"'
+    }
+    sb.result()
   }
 
   /** Placeholder for select query */
