@@ -67,16 +67,17 @@ object SqlInterpolationParameter {
     new SqlParameter(value, dataType)
   }
 
-  implicit def toIdentifierParameter(i: SqlIdentifier): IdentifierParameter        = IdentifierParameter(i)
-  implicit def toIdentifiersParameter(i: Seq[SqlIdentifier]): IdentifiersParameter = IdentifiersParameter(i)
-  implicit def columnsParameter(c: Seq[SqlColumn[?]]): IdentifiersParameter        = IdentifiersParameter(c.map(_.id))
-  implicit def rawBlockParameter(rawPart: SqlRawPart): RawBlockParameter           = RawBlockParameter(rawPart.s)
-  implicit def innerSql(sql: Sql): InnerSql                                        = InnerSql(sql)
-  implicit def columnPath(columnPath: ColumnPath[?]): IdentifierParameter          = IdentifierParameter(columnPath.buildIdentifier)
-  implicit def alias(alias: Alias[?]): RawBlockParameter                           = RawBlockParameter(
+  implicit def toIdentifierParameter(i: SqlIdentifying): IdentifierParameter        = IdentifierParameter(i.buildIdentifier)
+  implicit def toIdentifiersParameter(i: Seq[SqlIdentifying]): IdentifiersParameter = IdentifiersParameter(
+    i.map(_.buildIdentifier)
+  )
+  implicit def columnsParameter(c: Seq[SqlColumn[?]]): IdentifiersParameter         = IdentifiersParameter(c.map(_.id))
+  implicit def rawBlockParameter(rawPart: SqlRawPart): RawBlockParameter            = RawBlockParameter(rawPart.s)
+  implicit def innerSql(sql: Sql): InnerSql                                         = InnerSql(sql)
+  implicit def alias(alias: Alias[?]): RawBlockParameter                            = RawBlockParameter(
     s"${alias.tabular.tableName} ${alias.aliasName}"
   )
-  implicit def crd(crd: CrdBase[?]): RawBlockParameter                             = RawBlockParameter(s"${crd.tabular.tableName}")
+  implicit def crd(crd: CrdBase[?]): RawBlockParameter                              = RawBlockParameter(s"${crd.tabular.tableName}")
 }
 
 /** Something which can be added to sql""-interpolation without further checking. */

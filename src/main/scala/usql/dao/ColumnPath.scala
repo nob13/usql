@@ -1,18 +1,23 @@
 package usql.dao
 
-import usql.SqlIdentifier
+import usql.{SqlIdentifier, SqlIdentifying}
 
 /**
  * Helper for going through the field path of SqlFielded.
  */
-case class ColumnPath[T](root: SqlFielded[?], fields: List[String], alias: Option[String] = None) extends Selectable {
-  type Fields = NamedTuple.Map[NamedTuple.From[T], ColumnPath]
+case class ColumnPath[R, T](root: SqlFielded[R], fields: List[String], alias: Option[String] = None)
+    extends Selectable
+    with SqlIdentifying {
 
-  def selectDynamic(name: String): ColumnPath[?] = {
+  final type Child[X] = ColumnPath[R, X]
+
+  type Fields = NamedTuple.Map[NamedTuple.From[T], Child]
+
+  def selectDynamic(name: String): ColumnPath[R, ?] = {
     ColumnPath(root, name :: fields, alias)
   }
 
-  def buildIdentifier: SqlIdentifier = {
+  override def buildIdentifier: SqlIdentifier = {
     val reversed = fields.reverse
     val walked   = reversed.foldLeft(ColumnPath.FieldedWalker(root): ColumnPath.Walker)(_.select(_))
     walked.id.copy(alias = alias)

@@ -64,7 +64,7 @@ abstract class CrdBase[T] extends Crd[T] {
   def alias(name: String): Alias[T] = tabular.alias(name)
 
   /** Gives access to the columns */
-  def cols: ColumnPath[T] = tabular.cols
+  def cols: ColumnPath[T, T] = tabular.cols
 
   private lazy val insertStatement = {
     val placeholders = SqlRawPart(tabular.columns.map(_.id.placeholder.s).mkString(","))
@@ -106,7 +106,7 @@ abstract class KeyedCrudBase[K, T](using keyDataType: DataType[K]) extends CrdBa
   override type Key = K
 
   /** The column of the key */
-  val keyColumn: SqlIdentifier
+  val keyColumn: SqlIdentifying
 
   override def keyOf(value: T): K
 

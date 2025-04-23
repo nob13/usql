@@ -1,5 +1,12 @@
 package usql
 
+/** Something which can produce an identifier. */
+trait SqlIdentifying {
+
+  /** Build the identifier. */
+  def buildIdentifier: SqlIdentifier
+}
+
 /**
  * An SQL Identifier (table or colum name
  * @param name
@@ -8,7 +15,7 @@ package usql
  *   if true, the identifier will be quoted.
  */
 @throws[IllegalArgumentException]("If name contains a \"")
-case class SqlIdentifier(name: String, quoted: Boolean, alias: Option[String] = None) {
+case class SqlIdentifier(name: String, quoted: Boolean, alias: Option[String] = None) extends SqlIdentifying {
   require(!name.contains("\""), "Identifiers may not contain \"")
 
   /** Serialize the identifier. */
@@ -35,6 +42,8 @@ case class SqlIdentifier(name: String, quoted: Boolean, alias: Option[String] = 
   def namedPlaceholder: SqlRawPart = SqlRawPart(serialize + " = ?")
 
   override def toString: String = serialize
+
+  override def buildIdentifier: SqlIdentifier = this
 }
 
 object SqlIdentifier {

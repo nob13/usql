@@ -12,7 +12,7 @@ trait SqlFielded[T] extends SqlColumnar[T] {
   def fields: Seq[Field[?]]
 
   /** Access to the columns */
-  def cols: ColumnPath[T] = ColumnPath(this, Nil)
+  def cols: ColumnPath[T, T] = ColumnPath(this, Nil)
 
   /** Split an instance into its fields */
   protected[dao] def split(value: T): Seq[Any]
