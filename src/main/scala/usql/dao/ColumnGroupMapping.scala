@@ -19,4 +19,8 @@ object ColumnGroupMapping {
       SqlIdentifier.fromString(applied)
     }
   }
+
+  case object Anonymous extends ColumnGroupMapping {
+    override def map(columnBaseName: SqlIdentifier, childId: SqlIdentifier): SqlIdentifier = childId
+  }
 }
