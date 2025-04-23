@@ -21,9 +21,7 @@ class SqlFieldedTest extends TestBase {
   ) derives SqlTabular
 
   object Person extends KeyedCrudBase[Int, Person] {
-    override val keyColumn: SqlIdentifier = "id"
-
-    override def keyOf(value: Person): Int = value.id
+    override def key: KeyColumnPath = cols.id
 
     override lazy val tabular: SqlTabular[Person] = summon
   }

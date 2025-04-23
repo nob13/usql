@@ -105,10 +105,16 @@ abstract class KeyedCrudBase[K, T](using keyDataType: DataType[K]) extends CrdBa
 
   override type Key = K
 
-  /** The column of the key */
-  val keyColumn: SqlIdentifying
+  final type KeyColumnPath = ColumnPath[T, K]
 
-  override def keyOf(value: T): K
+  /** The column of the key */
+  lazy val keyColumn: SqlIdentifying = key.buildIdentifier
+
+  def keyOf(value: T): K = cachedKeyGetter(value)
+
+  def key: KeyColumnPath
+
+  private lazy val cachedKeyGetter: T => K = key.buildGetter
 
   private lazy val updateStatement = {
     val namedPlaceholders = SqlRawPart(tabular.columns.map(_.id.namedPlaceholder.s).mkString(","))

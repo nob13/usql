@@ -27,9 +27,7 @@ class SimpleJoinTest extends TestBaseWithH2 {
   ) derives SqlTabular
 
   object Person extends KeyedCrudBase[Int, Person] {
-    override val keyColumn: SqlIdentifier = "id"
-
-    override def keyOf(value: Person): Int = value.id
+    override def key: KeyColumnPath = cols.id
 
     override lazy val tabular: SqlTabular[Person] = summon
   }
@@ -40,9 +38,7 @@ class SimpleJoinTest extends TestBaseWithH2 {
   ) derives SqlTabular
 
   object Level extends KeyedCrudBase[Int, Level] {
-    override val keyColumn: SqlIdentifier = "id"
-
-    override def keyOf(value: Level): Int = value.id
+    override def key: KeyColumnPath = cols.id
 
     override lazy val tabular: SqlTabular[Level] = summon
   }

@@ -65,9 +65,7 @@ class SqlCrdBaseTest extends TestBaseWithH2 {
   ) derives SqlTabular
 
   object WithSubCoords extends KeyedCrudBase[Int, WithSubCoords] {
-    override val keyColumn: SqlIdentifier = "id"
-
-    override def keyOf(value: WithSubCoords): Int = value.id
+    override def key: KeyColumnPath = cols.id
 
     override lazy val tabular: SqlTabular[WithSubCoords] = summon
   }
