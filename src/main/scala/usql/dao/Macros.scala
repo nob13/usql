@@ -33,7 +33,7 @@ object Macros {
   }
 
   /** Combined TypeInfos for a tuple. */
-  case class TypeInfos[T](infos: List[TypeInfo[_]], builder: List[Any] => T)
+  case class TypeInfos[T](infos: List[TypeInfo[?]], builder: List[Any] => T)
 
   object TypeInfos {
     given forTuple[H, T <: Tuple](

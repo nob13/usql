@@ -33,7 +33,7 @@ object SqlTabular {
       tableName: SqlIdentifier,
       fielded: SqlFielded[T]
   ) extends SqlTabular[T] {
-    override def fields: Seq[Field[_]] = fielded.fields
+    override def fields: Seq[Field[?]] = fielded.fields
 
     override protected[dao] def split(value: T): Seq[Any] = fielded.split(value)
 
