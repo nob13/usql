@@ -8,7 +8,12 @@ easy to write more Profiles).
 
 ## Installation
 
-You need Scala 3.7.0
+Version Matrix
+
+| Version | JVM Version | Scala Version |
+|---------|-------------|---------------|
+| 0.3.x   | 21+         | 3.7.x+        |
+| 0.2.x   | 17+         | 3.3.x+        |           
 
 Add to build.sbt
 
@@ -159,7 +164,7 @@ case class Person(
  ) derives SqlTabular
 
 object Person extends KeyedCrudBase[Int, Person] {
-  override val keyColumn: SqlIdentifier = "id"
+  override def key: KeyColumnPath = cols.id
 
   override def keyOf(value: Person): Int = value.id
 

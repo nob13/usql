@@ -73,7 +73,7 @@ case class Person(
 ) derives SqlTabular
 
 object Person extends KeyedCrudBase[Int, Person] {
-  override val keyColumn: SqlIdentifier = "id"
+  override def key: KeyColumnPath = cols.id
 
   override def keyOf(value: Person): Int = value.id
 
