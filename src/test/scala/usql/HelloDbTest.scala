@@ -85,4 +85,22 @@ class HelloDbTest extends TestBaseWithH2 {
 
     sql"SELECT COUNT(*) FROM ${tableName}".query.one[Int]() shouldBe Some(1)
   }
+
+  it should "allow in queries" in {
+    sql"""INSERT INTO "user" (id, name) VALUES (${1}, ${"Alice"})""".update.run()
+    sql"""INSERT INTO "user" (id, name) VALUES (${3}, ${"Bob"})""".update.run()
+
+    val ids = Seq(1, 2, 3)
+
+    val got =
+      sql"""
+        SELECT name FROM "user" WHERE id IN ${SqlIn(ids)}
+         """.query.all[String]()
+
+    got should contain theSameElementsAs Seq("Alice", "Bob")
+
+    sql"""
+            SELECT name FROM "user" WHERE id IN ${SqlIn(Seq(9, 8, 7, 6))}
+             """.query.all[String]() shouldBe empty
+  }
 }
