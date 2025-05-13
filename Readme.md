@@ -107,6 +107,14 @@ val one: Option[(Int, String)] = sql"SELECT id, name FROM #${"person"} WHERE id 
 println(s"One=${one}")
 ```
 
+Encoding multiple Parameters (e.g. SQL-In-Operator):
+
+```scala 3
+val ids = Seq(1,2,3)
+val names = sql"SELECT name FROM person WHERE id IN (${SqlParameters(ids)})".query.all[String]()
+println(s"Names=${names}")
+```
+
 ## Inserts
 
 ```scala 3
@@ -180,7 +188,7 @@ println(Person.findByKey(6)) // Person(6, Franziska)
 
 ## Scala 3.7.0+ Named Tuples
 
-```scala3
+```scala 3
 // Person.col.id will be automatically checked.
 val allAgain: Vector[(Int, String)] =
   sql"SELECT ${Person.cols.id}, ${Person.cols.name} FROM ${Person}".query.all[(Int, String)]()
