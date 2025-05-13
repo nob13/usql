@@ -78,16 +78,14 @@ object SqlInterpolationParameter {
     s"${alias.tabular.tableName} ${alias.aliasName}"
   )
 
-  implicit def sqlIn[T](sqlIn: SqlIn[T])(using dataType: DataType[T]): InnerSql = {
+  implicit def sqlParameters[T](sqlParameters: SqlParameters[T])(using dataType: DataType[T]): InnerSql = {
     val builder = Seq.newBuilder[(String, SqlInterpolationParameter)]
-    builder += (("(", SqlInterpolationParameter.Empty))
-    sqlIn.values.headOption.foreach { first =>
+    sqlParameters.values.headOption.foreach { first =>
       builder += (("", SqlParameter(first)))
-      sqlIn.values.tail.foreach { next =>
+      sqlParameters.values.tail.foreach { next =>
         builder += ((",", SqlParameter(next)))
       }
     }
-    builder += ((")", SqlInterpolationParameter.Empty))
     InnerSql(Sql(builder.result()))
   }
 
@@ -99,5 +97,5 @@ case class SqlRawPart(s: String) {
   override def toString: String = s
 }
 
-/** Marker for a sequence of elements like in SQL IN Clause, will be encoded as `(?,...,?)` and filled with values */
-case class SqlIn[T](values: Seq[T])
+/** Marker for a sequence of elements like in SQL IN Clause, will be encoded as `?,...,?` and filled with values */
+case class SqlParameters[T](values: Seq[T])

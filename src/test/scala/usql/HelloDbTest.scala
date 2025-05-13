@@ -1,9 +1,8 @@
 package usql
 
-import usql.profiles.BasicProfile.*
 import usql.util.TestBaseWithH2
 
-import java.sql.{ResultSet, SQLException}
+import java.sql.SQLException
 
 class HelloDbTest extends TestBaseWithH2 {
 
@@ -94,13 +93,17 @@ class HelloDbTest extends TestBaseWithH2 {
 
     val got =
       sql"""
-        SELECT name FROM "user" WHERE id IN ${SqlIn(ids)}
+        SELECT name FROM "user" WHERE id IN (${SqlParameters(ids)})
          """.query.all[String]()
 
     got should contain theSameElementsAs Seq("Alice", "Bob")
 
     sql"""
-            SELECT name FROM "user" WHERE id IN ${SqlIn(Seq(9, 8, 7, 6))}
+            SELECT name FROM "user" WHERE id IN (${SqlParameters(Seq(9, 8, 7, 6))})
              """.query.all[String]() shouldBe empty
+
+    sql"""
+                SELECT name FROM "user" WHERE id IN (${SqlParameters(Nil: Seq[Int])})
+                 """.query.all[String]() shouldBe empty
   }
 }
