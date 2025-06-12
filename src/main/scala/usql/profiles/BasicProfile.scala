@@ -66,7 +66,7 @@ trait BasicProfile {
       casted.map(_.asInstanceOf[T]).toSeq
     },
     (v, ps) => {
-      val javaArray = v.asInstanceOf[Seq[AnyRef]].toArray[AnyRef]
+      val javaArray = v.view.map(_.asInstanceOf[AnyRef]).toArray[AnyRef]
       val array     = ps.getConnection.createArrayOf(jdbcType.toString, javaArray)
       array
     }

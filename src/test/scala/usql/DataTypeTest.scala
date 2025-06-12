@@ -39,7 +39,7 @@ class DataTypeTest extends TestBaseWithH2 {
     Example.make[Seq[Boolean]]("BOOLEAN ARRAY", Seq(false, true))
   )
 
-  private def testSimpleType[T](example: Example[T]): Unit = {
+  private def testExample[T](example: Example[T]): Unit = {
     it should s"work for ${example.dbType}" in {
       runSql(s"""
                 |CREATE TABLE foo (id INT PRIMARY KEY, x ${example.dbType} NOT NULL);
@@ -70,6 +70,6 @@ class DataTypeTest extends TestBaseWithH2 {
   }
 
   examples.foreach { example =>
-    testSimpleType(example)
+    testExample(example)
   }
 }
