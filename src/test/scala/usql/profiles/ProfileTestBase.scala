@@ -19,6 +19,8 @@ abstract class ProfileTestBase extends TestBaseWithDatabase {
       Example(dt, optionalDt, dbType, value)
   }
 
+  def hasTinyInt: Boolean = true
+
   val examples = Seq(
     Example.make("TEXT", "Hallo"),
     Example.make("INT", 123),
@@ -27,18 +29,23 @@ abstract class ProfileTestBase extends TestBaseWithDatabase {
     Example.make("FLOAT", 3.14f),
     Example.make("DOUBLE PRECISION", Math.PI),
     Example.make("SMALLINT", 124.shortValue),
-    Example.make("TINYINT", 124.byteValue),
     Example.make("TIMESTAMP", Instant.parse("2025-06-11T20:48:13Z")),
     Example.make("TEXT ARRAY", Seq("Alice", "Bob")),
     Example.make("INT ARRAY", Seq(1, 2, 3)),
     Example.make("BIGINT ARRAY", Seq(-1, 1, 2, 3, 3464368453864568L)),
     // Note: NaN values are not checked, because they do not compare to be equal
     Example.make[Seq[Float]]("FLOAT ARRAY", Seq(3.14f, 5.3f, -14f)),
-    Example.make[Seq[Double]]("DOUBLE ARRAY", Seq(3.14, 5.3, -14)),
+    Example.make[Seq[Double]]("DOUBLE PRECISION ARRAY", Seq(3.14, 5.3, -14)),
     Example.make[Seq[Short]]("SMALLINT ARRAY", Seq(0.toShort, 100.toShort)),
-    Example.make[Seq[Byte]]("TINYINT ARRAY", Seq(0.toByte, 100.toByte)),
     Example.make[Seq[Boolean]]("BOOLEAN ARRAY", Seq(false, true))
-  )
+  ) ++ {
+    if hasTinyInt then {
+      Seq(
+        Example.make("TINYINT", 124.byteValue),
+        Example.make[Seq[Byte]]("TINYINT ARRAY", Seq(0.toByte, 100.toByte))
+      )
+    } else Nil
+  }
 
   private def testExample[T](example: Example[T]): Unit = {
     it should s"work for ${example.dbType}" in {
