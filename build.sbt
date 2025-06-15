@@ -1,4 +1,5 @@
 import xerial.sbt.Sonatype.GitHubHosting
+import xerial.sbt.Sonatype.sonatypeCentralHost
 
 // If there is a Tag starting with v, e.g. v0.3.0 use it as the build artefact version (e.g. 0.3.0)
 val versionTag = sys.env
@@ -13,6 +14,7 @@ ThisBuild / scalacOptions ++= Seq("-feature")
 
 def publishSettings = Seq(
   publishTo               := sonatypePublishToBundle.value,
+  sonatypeCredentialHost  := sonatypeCentralHost,
   sonatypeBundleDirectory := (ThisBuild / baseDirectory).value / "target" / "sonatype-staging" / s"${version.value}",
   licenses                := Seq("APL2" -> url("http://www.apache.org/licenses/LICENSE-2.0.txt")),
   homepage                := Some(url("https://github.com/reactivecore/usql")),
