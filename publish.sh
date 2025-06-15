@@ -6,6 +6,6 @@ source ~/bin/java21.sh
 
 read -p "Press enter to continue"
 
-sbt sonatypeBundleRelease
+sbt publishSigned sonatypeBundleRelease
 
 
