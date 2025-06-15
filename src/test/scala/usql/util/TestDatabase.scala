@@ -4,12 +4,13 @@ import org.scalatest.BeforeAndAfterEach
 import usql.ConnectionProvider
 
 import java.sql.{Connection, DriverManager}
+import java.util.Properties
 import scala.util.{Random, Using}
 
 trait TestDatabaseSupport {
 
-  /** Generates a connection to the database. */
-  def makeJdbcUrl(): String
+  /** Generates JDBC Url and Properties to connect to the database. */
+  def makeJdbcUrlAndProperties(): (String, Properties)
 }
 
 trait TestDatabase extends BeforeAndAfterEach with TestDatabaseSupport {
@@ -17,16 +18,20 @@ trait TestDatabase extends BeforeAndAfterEach with TestDatabaseSupport {
 
   protected def baseSql: String = ""
 
-  private var _rootConnection: Option[Connection] = None
-  private var _url: Option[String]                = None
+  private var _rootConnection: Option[Connection]             = None
+  private var _urlAndProperties: Option[(String, Properties)] = None
 
-  protected def jdbcUrl: String = _url.getOrElse {
-    throw new IllegalStateException(s"No connection")
-  }
+  protected def jdbcUrl: String = _urlAndProperties.getOrElse {
+    throw new IllegalStateException(s"No jdbc url")
+  }._1
+
+  protected def jdbcPropertes: Properties = _urlAndProperties.getOrElse {
+    throw new IllegalStateException(s"No properties")
+  }._2
 
   given cp: ConnectionProvider with {
     override def withConnection[T](f: Connection ?=> T): T = {
-      Using.resource(DriverManager.getConnection(jdbcUrl)) { c =>
+      Using.resource(DriverManager.getConnection(jdbcUrl, jdbcPropertes)) { c =>
         f(using c)
       }
     }
@@ -34,11 +39,11 @@ trait TestDatabase extends BeforeAndAfterEach with TestDatabaseSupport {
 
   override protected def beforeEach(): Unit = {
     super.beforeEach()
-    val url = makeJdbcUrl()
+    val (url, props) = makeJdbcUrlAndProperties()
 
-    val connection = DriverManager.getConnection(url)
+    val connection = DriverManager.getConnection(url, props)
     _rootConnection = Some(connection)
-    _url = Some(url)
+    _urlAndProperties = Some((url, props))
 
     runBaseSql()
   }
