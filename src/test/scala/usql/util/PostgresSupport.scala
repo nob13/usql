@@ -46,7 +46,7 @@ trait PostgresSupport extends TestDatabaseSupport with BeforeAndAfterEach {
   override protected def afterEach(): Unit = {
     super.afterEach()
     withRootConnection { con =>
-      con.prepareStatement(s"DROP DATABASE ${dbName}")
+      con.prepareStatement(s"DROP DATABASE ${dbName}").execute()
     }
   }
 
