@@ -1,11 +1,12 @@
-package usql
+package usql.profiles
 
-import usql.util.TestBaseWithH2
-import usql.profiles.H2Profile.given
+import usql.util.{TestBase, TestBaseWithDatabase, TestDatabase}
+import usql.*
+import BasicProfile.*
 
 import java.time.Instant
 
-class DataTypeTest extends TestBaseWithH2 {
+abstract class ProfileTestBase extends TestBaseWithDatabase {
   case class Example[T](
       dataType: DataType[T],
       optionalDataType: DataType[Option[T]],
@@ -44,7 +45,9 @@ class DataTypeTest extends TestBaseWithH2 {
       runSql(s"""
                 |CREATE TABLE foo (id INT PRIMARY KEY, x ${example.dbType} NOT NULL);
                 |""".stripMargin)
+
       given dt: DataType[T] = example.dataType
+
       sql"INSERT INTO foo (id, x) VALUES (1, ${example.value})".execute()
 
       val all = sql"SELECT id, x FROM foo".query.all[(Int, T)]()
