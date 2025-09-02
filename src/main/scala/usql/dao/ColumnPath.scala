@@ -1,6 +1,9 @@
 package usql.dao
 
-import usql.{SqlIdentifier, SqlIdentifying}
+import usql.SqlInterpolationParameter.SqlParameter
+import usql.{DataType, Sql, SqlIdentifier, SqlIdentifying, SqlInterpolationParameter, sql}
+
+import scala.language.implicitConversions
 
 /**
  * Helper for going through the field path of SqlFielded.
@@ -14,7 +17,8 @@ import usql.{SqlIdentifier, SqlIdentifying}
  */
 case class ColumnPath[R, T](root: SqlFielded[R], fields: List[String] = Nil, alias: Option[String] = None)
     extends Selectable
-    with SqlIdentifying {
+    with SqlIdentifying
+    with Rep[T] {
 
   final type Child[X] = ColumnPath[R, X]
 
@@ -40,6 +44,8 @@ case class ColumnPath[R, T](root: SqlFielded[R], fields: List[String] = Nil, ali
   override def buildIdentifier: SqlIdentifier = {
     walker.id.copy(alias = alias)
   }
+
+  override def toInterpolationParameter: SqlInterpolationParameter = buildIdentifier
 
   def buildGetter: R => T = {
     walker.get
