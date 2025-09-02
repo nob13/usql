@@ -1,6 +1,6 @@
 package usql.dao
 
-import usql.{ConnectionProvider, Query, RowDecoder, Sql, SqlIdentifier, sql}
+import usql.{ConnectionProvider, DataType, Query, RowDecoder, Sql, SqlIdentifier, SqlInterpolationParameter, sql}
 
 object QueryBuilder {
   def from[T](using tabular: SqlTabular[T]): From[T] = From[T](tabular)
@@ -9,11 +9,11 @@ object QueryBuilder {
 
     def where(pred: ColumnPath[T, T] => Rep[Boolean]): From[T] = {
       copy(
-        reverseWherePredicates = reverseWherePredicates :+ pred(tabular.cols)
+        reverseWherePredicates = pred(tabular.cols) :: reverseWherePredicates
       )
     }
 
-    def all: Selected[T, T] = Selected(this, tabular.columns.map(_.id).toList, tabular.rowDecoder)
+    def selectAll: Selected[T, T] = Selected(this, tabular.columns.map(_.id).toList, tabular.rowDecoder)
 
     def select[A1](col1: ColumnPath[T, T] => ColumnPath[T, A1])(using rowDecoder: RowDecoder[A1]): Selected[T, A1] = {
       Selected[T, A1](
@@ -56,9 +56,14 @@ object QueryBuilder {
 
   case class Selected[T, R](from: From[T], selection: List[SqlIdentifier], decoder: RowDecoder[R]) {
     private def toQuery: Query = {
-      // TODO: Build Query
+      val where: Sql = if from.reverseWherePredicates.isEmpty then {
+        Sql(Nil)
+      } else {
+        sql"WHERE ${from.reverseWherePredicates.reverse.reduce(_ && _).toInterpolationParameter}"
+      }
+
       Query(
-        sql"SELECT ${selection}"
+        sql"SELECT ${selection} FROM ${from.tabular.tableName} ${where}"
       )
     }
 
@@ -70,12 +75,4 @@ object QueryBuilder {
       toQuery.all[R]()(using decoder)
     }
   }
-
-  // TODO:
-  // - Nice Select of fields, so that types are automatically detected.
-  // - Nice defining of where clauses
-  // - Can we automate the select calls?
-  // - Starting Point should be the SqlFielded and or CrdRepo
-  // Not-TODO (yet)
-  // - Joins
 }
