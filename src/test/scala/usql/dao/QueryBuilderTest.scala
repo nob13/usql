@@ -12,6 +12,15 @@ class QueryBuilderTest extends TestBaseWithH2 {
       |  name VARCHAR,
       |  age INT
       |);
+      |CREATE TABLE permission(
+      |  id INT PRIMARY KEY,
+      |  name VARCHAR
+      |);
+      |CREATE TABLE person_permission(
+      |  person_id INT REFERENCES person(id),
+      |  permission_id INT REFERENCES permission(id),
+      |  PRIMARY KEY(person_id, permission_id)
+      |);
       |""".stripMargin
 
   case class Person(
@@ -26,12 +35,43 @@ class QueryBuilderTest extends TestBaseWithH2 {
     override lazy val tabular: SqlTabular[Person] = summon
   }
 
+  case class Permission(
+      id: Int,
+      name: String
+  ) derives SqlTabular
+
+  object Permission extends KeyedCrudBase[Int, Permission] {
+    override def key: KeyColumnPath = cols.id
+
+    override lazy val tabular: SqlTabular[Permission] = summon
+  }
+
+  case class PersonPermission(
+      personId: Int,
+      permissionId: Int
+  ) derives SqlTabular
+
+  object PersonPermission extends CrdBase[PersonPermission] {
+    override lazy val tabular: SqlTabular[PersonPermission] = summon
+  }
+
   trait EnvWithSamples {
     val alice  = Person(1, "Alice", Some(42))
     val bob    = Person(2, "Bob", None)
     val charly = Person(3, "Charly", None)
 
     Person.insert(alice, bob, charly)
+
+    val read  = Permission(1, "Read")
+    val write = Permission(2, "Write")
+
+    Permission.insert(read, write)
+
+    PersonPermission.insert(
+      PersonPermission(alice.id, read.id),
+      PersonPermission(alice.id, write.id),
+      PersonPermission(bob.id, read.id)
+    )
   }
 
   it should "make a simple query" in new EnvWithSamples {
@@ -76,4 +116,7 @@ class QueryBuilderTest extends TestBaseWithH2 {
     names should contain theSameElementsAs Seq(("Alice", Some(42)), ("Bob", None), ("Charly", None))
   }
 
+  it should "work for a simple join" in new EnvWithSamples {
+    // TODO
+  }
 }
