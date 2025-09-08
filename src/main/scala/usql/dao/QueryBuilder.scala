@@ -35,8 +35,8 @@ object QueryBuilder {
 
     trait RecursiveFrom[T <: Tuple] extends From[T] {
       def join[R](
-                   on: (ColumnPath[T, T], ColumnPath[R, R]) => Rep[Boolean]
-                 )(using r: SqlTabular[R]): RecursiveFrom[T :* R] = {
+          on: (ColumnPath[T, T], ColumnPath[R, R]) => Rep[Boolean]
+      )(using r: SqlTabular[R]): RecursiveFrom[T :* R] = {
         AliasN[R, T](
           r,
           this

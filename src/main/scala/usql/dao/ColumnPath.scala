@@ -15,17 +15,24 @@ import scala.language.implicitConversions
  * @tparam T
  *   end path
  */
-case class ColumnPath[R, T](root: SqlFielded[R], fields: List[String] = Nil, alias: Option[String] = None)
-    extends Selectable
-    with SqlIdentifying
-    with Rep[T] {
-
+trait ColumnPath[R, T] extends Selectable with SqlIdentifying with Rep[T] {
   final type Child[X] = ColumnPath[R, X]
 
+  /** Names the Fields of this ColumnPath. */
   type Fields = NamedTuple.Map[NamedTuple.From[T], Child]
 
+  /** Select a dynamic field. */
+  def selectDynamic(name: String): ColumnPath[R, ?]
+
+  /** Build a getter for this field from the base type. */
+  def buildGetter: R => T
+}
+
+case class ColumnPathImpl[R, T](root: SqlFielded[R], fields: List[String] = Nil, alias: Option[String] = None)
+    extends ColumnPath[R, T] {
+
   def selectDynamic(name: String): ColumnPath[R, ?] = {
-    ColumnPath(root, name :: fields, alias)
+    ColumnPathImpl(root, name :: fields, alias)
   }
 
   private lazy val walker: ColumnPath.Walker[R, T] = {
@@ -47,14 +54,14 @@ case class ColumnPath[R, T](root: SqlFielded[R], fields: List[String] = Nil, ali
 
   override def toInterpolationParameter: SqlInterpolationParameter = buildIdentifier
 
-  def buildGetter: R => T = {
+  override def buildGetter: R => T = {
     walker.get
   }
 }
 
 object ColumnPath {
 
-  def make[T](using f: SqlFielded[T]): ColumnPath[T, T] = ColumnPath(f)
+  def make[T](using f: SqlFielded[T]): ColumnPath[T, T] = ColumnPathImpl(f)
 
   trait Walker[R, T] {
     def select(field: String): Walker[R, ?]

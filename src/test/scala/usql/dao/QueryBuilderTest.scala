@@ -117,12 +117,12 @@ class QueryBuilderTest extends TestBaseWithH2 {
   }
 
   it should "work for a simple join" in new EnvWithSamples {
-    val foo = QueryBuilder.fromX[Person]
+    val foo = QueryBuilder
+      .fromX[Person]
       .join[PersonPermission](_.id == _.personId)
 
-    // TODO: The Case Class base of ColumnPath shadows permissionId
     val foo2 = foo
       .join[Permission](_._2.permissionId == _.id)
-    // TODO
+
   }
 }
