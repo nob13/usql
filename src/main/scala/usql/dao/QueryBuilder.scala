@@ -2,8 +2,12 @@ package usql.dao
 
 import usql.{ConnectionProvider, DataType, Query, RowDecoder, Sql, SqlIdentifier, SqlInterpolationParameter, sql}
 
+import scala.Tuple.:*
+
 object QueryBuilder {
   def from[T](using tabular: SqlTabular[T]): Select[T] = Select[T](From.Simple(tabular))
+
+  def fromX[T](using tabular: SqlTabular[T]): From.Simple[T] = From.Simple(tabular)
 
   /** Encodes the source of data. */
   sealed trait From[T] {
@@ -17,6 +21,40 @@ object QueryBuilder {
       override def fielded: SqlFielded[T] = tabular
 
       override def encode: Sql = sql"${tabular.tableName}"
+
+      def join[R](
+          on: (ColumnPath[T, T], ColumnPath[R, R]) => Rep[Boolean]
+      )(using r: SqlTabular[R]): RecursiveFrom[(T, R)] = {
+        val underlying: RecursiveFrom[T *: EmptyTuple] = Alias1[T](tabular)
+        AliasN[R, T *: EmptyTuple](
+          r,
+          underlying
+        )
+      }
+    }
+
+    trait RecursiveFrom[T <: Tuple] extends From[T] {
+      def join[R](
+                   on: (ColumnPath[T, T], ColumnPath[R, R]) => Rep[Boolean]
+                 )(using r: SqlTabular[R]): RecursiveFrom[T :* R] = {
+        AliasN[R, T](
+          r,
+          this
+        )
+      }
+    }
+
+    case class Alias1[T](tabular: SqlTabular[T]) extends RecursiveFrom[T *: EmptyTuple] {
+      override def fielded: SqlFielded[T *: EmptyTuple] = ???
+
+      override def encode: Sql = ???
+    }
+
+    case class AliasN[R, L <: Tuple](tabular: SqlTabular[R], underlying: RecursiveFrom[L])
+        extends RecursiveFrom[L :* R] {
+      override def fielded: SqlFielded[L :* R] = ???
+
+      override def encode: Sql = ???
     }
   }
 
