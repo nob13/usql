@@ -24,6 +24,9 @@ trait ColumnPath[R, T] extends Selectable with SqlIdentifying with Rep[T] {
   /** Select a dynamic field. */
   def selectDynamic(name: String): ColumnPath[R, ?]
 
+  /** Unpack an option. */
+  def ![X](using ev: T => Option[X]): ColumnPath[R, X]
+
   /** Build a getter for this field from the base type. */
   def buildGetter: R => T
 }
@@ -33,6 +36,10 @@ case class ColumnPathImpl[R, T](root: SqlFielded[R], fields: List[String] = Nil,
 
   def selectDynamic(name: String): ColumnPath[R, ?] = {
     ColumnPathImpl(root, name :: fields, alias)
+  }
+
+  override def ![X](using ev: T => Option[X]): ColumnPath[R, X] = {
+    ColumnPathImpl(root, "!" :: fields, alias)
   }
 
   private lazy val walker: ColumnPath.Walker[R, T] = {

@@ -125,4 +125,30 @@ class QueryBuilderTest extends TestBaseWithH2 {
       .join[Permission](_._2.permissionId == _.id)
 
   }
+
+  it should "work with Query2" in new EnvWithSamples {
+    val withoutAge = Query2
+      .make[Person]
+      .filter(_.age.isNull)
+      .map(_.name)
+      .all()
+
+    withoutAge should contain theSameElementsAs Seq("Alice", "Bob")
+  }
+
+  it should "join with Query2" in new EnvWithSamples {
+    val foo = Query2
+      .make[Person]
+      .join(Query2.make[PersonPermission])(_.id == _.personId)
+      .join(Query2.make[Permission])(_._2.permissionId == _.id)
+      .filter(_._1._1.age.isNotNull)
+      .map(_._1._1.name)
+
+    val foo2 = Query2
+      .make[Person]
+      .leftJoin(Query2.make[PersonPermission])(_.id == _.personId)
+      .leftJoin(Query2.make[Permission])(_._2.!.permissionId == _.id)
+      .filter(_._1._1.age.isNotNull)
+      .map(_._1._1.name)
+  }
 }
