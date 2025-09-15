@@ -130,7 +130,8 @@ class QueryBuilderTest extends TestBaseWithH2 {
     val withoutAge = Query2
       .make[Person]
       .filter(_.age.isNull)
-      .map(_.name)
+      // .map(x => (x.name, x.age)) // TODO
+      .map(x => x.name)
       .all()
 
     withoutAge should contain theSameElementsAs Seq("Alice", "Bob")

@@ -29,11 +29,6 @@ trait Query2[T] {
       on: (BPath, right.BPath) => Rep[Boolean]
   ): Query2[(T, Option[R])] = GenericLeftJoin(this, right, on(basePath, right.basePath))
 
-  /** Map a tuple element. */
-  def map[R0, R1](f0: BPath => DPath[R0], f1: BPath => DPath[R1]): Query2[(R0, R1)] = project(
-    CombinedColumnPath(Seq(f0(basePath), f1(basePath)))
-  )
-
   /** Filter step. */
   def filter(f: BPath => Rep[Boolean]): Query2[T] = GenericFilter[T](List(f(basePath)), this)
 
@@ -47,18 +42,6 @@ trait Query2[T] {
   def all()(using cp: ConnectionProvider): Vector[T] = {
     Query(toSql).all()(using fielded.rowDecoder)
   }
-}
-
-class CombinedColumnPath[R, T <: Tuple](subPaths: Seq[ColumnPath[R, ?]]) extends ColumnPath[R, T] {
-  override def selectDynamic(name: String): ColumnPath[R, ?] = ???
-
-  override def buildGetter: R => T = ???
-
-  override def toInterpolationParameter: SqlInterpolationParameter = ???
-
-  override def buildIdentifier: SqlIdentifier = ???
-
-  override def ![X](using ev: T => Option[X]): ColumnPath[R, X] = ???
 }
 
 object Query2 {
