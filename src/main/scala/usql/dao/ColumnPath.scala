@@ -34,4 +34,24 @@ trait ColumnPath[R, T] extends Selectable with SqlIdentifying with Rep[T] {
 object ColumnPath {
 
   def make[T](using f: SqlFielded[T]): ColumnPath[T, T] = ColumnPathImpl(f)
+
+  trait BuildFromTuple[R, T <: Tuple] {
+    type Result <: ColumnPath[R, ?]
+
+    def build(from: T): Result
+  }
+
+  given buildFromEmptyTuple[R]: BuildFromTuple[R, EmptyTuple] with {
+    override type Result = ColumnPath[R, ?]
+
+    override def build[R](from: EmptyTuple): EmptyTuple = EmptyTuple
+  }
+
+  given buildFromRecursiveTuple[R, H, T <: Tuple](using rec: BuildFromTuple[R, T]): BuildFromTuple[R, H *: T] with {
+    // TODO: This doesn't work this way
+    override type Result = ColumnPath[R, H *: rec.Result[R]]
+
+    override def build[R](from: H *: T): Result[R] = ???
+  }
+
 }
