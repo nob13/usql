@@ -19,11 +19,24 @@ class ColumnPathTest extends TestBase {
 
   case class Sample(
       x: Int,
+      y: Int,
       @ColumnGroup(ColumnGroupMapping.Anonymous)
       sub: SubElement
   ) derives SqlFielded
 
   val path: ColumnPath[Sample, Sample] = ColumnPath.make
+
+  val sample = Sample(
+    100,
+    200,
+    sub = SubElement(
+      a = 101,
+      b = "Hello",
+      sub2 = SubSubElement(
+        true
+      )
+    )
+  )
 
   it should "fetch identifiers" in {
     path.x.buildIdentifier shouldBe SqlIdentifier.fromString("x")
@@ -35,19 +48,21 @@ class ColumnPathTest extends TestBase {
   }
 
   it should "fetch elements" in {
-    val sample  = Sample(
-      100,
-      sub = SubElement(
-        a = 101,
-        b = "Hello",
-        sub2 = SubSubElement(
-          true
-        )
-      )
-    )
     val getter1 = path.x.buildGetter
     val getter2 = path.sub.sub2.foo.buildGetter
     getter1(sample) shouldBe 100
     getter2(sample) shouldBe true
+  }
+
+  it should "work with tuples" in {
+    // val result: ColumnPath[Sample, (Int, Int)] = (path.x, path.y) // TODO
+  }
+  
+  it should "work with optionals" in {
+    // TODO
+  }
+  
+  it should "provide a fielded for each" in {
+    // TODO
   }
 }
