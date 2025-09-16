@@ -35,23 +35,42 @@ object ColumnPath {
 
   def make[T](using f: SqlFielded[T]): ColumnPath[T, T] = ColumnPathImpl(f)
 
+  implicit def fromTuple[R, T <: Tuple, C <: Tuple](using b: BuildFromTuple.Aux[R, T, C])(in: T): ColumnPath[R, C] =
+    b.build(in)
+
+  private def emptyPath[R]: ColumnPath[R, EmptyTuple] = ???
+
+  private def prependPath[R, H, T <: Tuple](head: ColumnPath[R, H], tail: ColumnPath[R, T]): ColumnPath[R, H *: T] = ???
+
   trait BuildFromTuple[R, T <: Tuple] {
-    type Result <: ColumnPath[R, ?]
+    type CombinedType <: Tuple
+
+    final type Result = ColumnPath[R, CombinedType]
 
     def build(from: T): Result
   }
 
-  given buildFromEmptyTuple[R]: BuildFromTuple[R, EmptyTuple] with {
-    override type Result = ColumnPath[R, ?]
-
-    override def build[R](from: EmptyTuple): EmptyTuple = EmptyTuple
+  object BuildFromTuple {
+    type Aux[R, T <: Tuple, C <: Tuple] = BuildFromTuple[R, T] {
+      type CombinedType = C
+    }
   }
 
-  given buildFromRecursiveTuple[R, H, T <: Tuple](using rec: BuildFromTuple[R, T]): BuildFromTuple[R, H *: T] with {
-    // TODO: This doesn't work this way
-    override type Result = ColumnPath[R, H *: rec.Result[R]]
+  given buildFromEmptyTuple[R]: BuildFromTuple.Aux[R, EmptyTuple, EmptyTuple] =
+    new BuildFromTuple[R, EmptyTuple] {
+      override type CombinedType = EmptyTuple
 
-    override def build[R](from: H *: T): Result[R] = ???
+      override def build(from: EmptyTuple): Result = emptyPath[R]
+    }
+
+  given buildFromIteration[R, H, T <: Tuple](using tailBuild: BuildFromTuple[R, T]): BuildFromTuple.Aux[
+    R,
+    (ColumnPath[R, H] *: T),
+    H *: tailBuild.CombinedType
+  ] = new BuildFromTuple[R, ColumnPath[R, H] *: T] {
+    override type CombinedType = H *: tailBuild.CombinedType
+
+    override def build(from: (ColumnPath[R, H] *: T)): Result = prependPath(from.head, tailBuild.build(from.tail))
   }
 
 }

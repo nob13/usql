@@ -55,13 +55,32 @@ class ColumnPathTest extends TestBase {
   }
 
   it should "work with tuples" in {
-    // val result: ColumnPath[Sample, (Int, Int)] = (path.x, path.y) // TODO
+    summon[ColumnPath.BuildFromTuple[Sample, EmptyTuple]] // geht
+    summon[ColumnPath.BuildFromTuple[Sample, Tuple1[ColumnPath[Sample, Int]]]] // geht
+    val s2                                 = summon[ColumnPath.BuildFromTuple[Sample, Tuple2[ColumnPath[Sample, Int], ColumnPath[Sample, Int]]]] // geht
+    val r2: ColumnPath[Sample, (Int, Int)] = s2.build(???)
+    /*
+    val foo1: ColumnPath[Sample, EmptyTuple] = EmptyTuple
+    val foo2: ColumnPath[Sample, (Int)] = (path.x)
+    summon[ColumnPath.BuildFromTuple[Sample, EmptyTuple]]
+    val s3 = ColumnPath.buildFromIteration[Sample, Int, EmptyTuple]
+    // summon[ColumnPath.BuildFromTuple[Sample, Tuple1[Int]]]// crashes
+    val blub: ColumnPath.BuildFromTuple[Sample, Tuple1[Int]] = ColumnPath.buildFromIteration[Sample, Int, EmptyTuple]
+    val s4 = ColumnPath.buildFromIteration[Sample, Int, Tuple1[Int]]
+    summon[ColumnPath.BuildFromTuple[Sample, Tuple1[Int]]]
+    val foo3: ColumnPath[Sample, (Int, Int)] = (path.x, path.y)
+     */
+    val blubbi = summon[ColumnPath.BuildFromTuple[Sample, Tuple2[ColumnPath[Sample, Int], ColumnPath[Sample, Int]]]]
+    val foo: Tuple2[ColumnPath[Sample, Int], ColumnPath[Sample, Int]] = (path.x, path.y)
+
+    val result: ColumnPath[Sample, (Int, Int)] = ColumnPath.fromTuple(foo)(using blubbi) // TODO
+
   }
-  
+
   it should "work with optionals" in {
     // TODO
   }
-  
+
   it should "provide a fielded for each" in {
     // TODO
   }
