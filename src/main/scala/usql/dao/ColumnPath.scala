@@ -39,10 +39,13 @@ object ColumnPath {
   implicit def fromTuple[T](in: T)(using b: BuildFromTuple[T]): ColumnPath[b.Root, b.CombinedType] =
     b.build(in)
 
-  private def emptyPath[R]: ColumnPath[R, EmptyTuple] = ???
+  private def emptyPath[R]: ColumnPath[R, EmptyTuple] = TupleColumnPath.Empty[R]()
 
-  private def prependPath[R, H, T <: Tuple](head: ColumnPath[R, H], tail: ColumnPath[R, T]): ColumnPath[R, H *: T] = ???
+  private def prependPath[R, H, T <: Tuple](head: ColumnPath[R, H], tail: ColumnPath[R, T]): ColumnPath[R, H *: T] = {
+    TupleColumnPath.Rec(head, tail)
+  }
 
+  /** Helper for building ColumnPath from Tuple */
   @implicitNotFound("Could not find BuildFromTuple")
   trait BuildFromTuple[T] {
     type CombinedType <: Tuple
