@@ -67,9 +67,11 @@ object SqlInterpolationParameter {
     new SqlParameter(value, dataType)
   }
 
-  implicit def toIdentifierParameter(i: SqlIdentifying): IdentifierParameter        = IdentifierParameter(i.buildIdentifier)
+  implicit def toIdentifierParameter(i: SqlIdentifying): IdentifiersParameter       = IdentifiersParameter(
+    i.buildIdentifier
+  )
   implicit def toIdentifiersParameter(i: Seq[SqlIdentifying]): IdentifiersParameter = IdentifiersParameter(
-    i.map(_.buildIdentifier)
+    i.flatMap(_.buildIdentifier)
   )
   implicit def columnsParameter(c: Seq[SqlColumn[?]]): IdentifiersParameter         = IdentifiersParameter(c.map(_.id))
   implicit def rawBlockParameter(rawPart: SqlRawPart): RawBlockParameter            = RawBlockParameter(rawPart.s)

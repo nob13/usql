@@ -18,7 +18,7 @@ object TupleColumnPath {
 
     override def toInterpolationParameter: SqlInterpolationParameter = SqlInterpolationParameter.Empty
 
-    override def buildIdentifier: SqlIdentifier = ???
+    override def buildIdentifier: Seq[SqlIdentifier] = Nil
   }
 
   case class Rec[R, H, T <: Tuple](head: ColumnPath[R, H],
@@ -48,6 +48,6 @@ object TupleColumnPath {
 
     override def toInterpolationParameter: SqlInterpolationParameter = buildIdentifier
 
-    override def buildIdentifier: SqlIdentifier = ???
+    override def buildIdentifier: Seq[SqlIdentifier] = head.buildIdentifier ++ tail.buildIdentifier
   }
 }

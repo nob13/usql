@@ -4,7 +4,7 @@ package usql
 trait SqlIdentifying {
 
   /** Build the identifier. */
-  def buildIdentifier: SqlIdentifier
+  def buildIdentifier: Seq[SqlIdentifier]
 }
 
 /**
@@ -43,7 +43,7 @@ case class SqlIdentifier(name: String, quoted: Boolean, alias: Option[String] = 
 
   override def toString: String = serialize
 
-  override def buildIdentifier: SqlIdentifier = this
+  override def buildIdentifier: Seq[SqlIdentifier] = List(this)
 }
 
 object SqlIdentifier {

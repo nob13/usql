@@ -74,7 +74,7 @@ object QueryBuilder {
     def select[A1](col1: ColumnPath[T, T] => ColumnPath[T, A1])(using rowDecoder: RowDecoder[A1]): Selected[T, A1] = {
       Selected[T, A1](
         this,
-        List(col1(path).buildIdentifier),
+        List(col1(path).buildIdentifier).flatten,
         rowDecoder
       )
     }
@@ -88,7 +88,7 @@ object QueryBuilder {
         List(
           col1(path).buildIdentifier,
           col2(path).buildIdentifier
-        ),
+        ).flatten,
         rowDecoder
       )
     }
@@ -104,7 +104,7 @@ object QueryBuilder {
           col1(path).buildIdentifier,
           col2(path).buildIdentifier,
           col3(path).buildIdentifier
-        ),
+        ).flatten,
         rowDecoder
       )
     }

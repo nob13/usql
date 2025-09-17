@@ -30,8 +30,8 @@ private[usql] case class ColumnPathImpl[R, T](
       .asInstanceOf[Walker[R, T]]
   }
 
-  override def buildIdentifier: SqlIdentifier = {
-    walker.id.copy(alias = alias)
+  override def buildIdentifier: Seq[SqlIdentifier] = {
+    Seq(walker.id.copy(alias = alias))
   }
 
   override def toInterpolationParameter: SqlInterpolationParameter = buildIdentifier
