@@ -55,9 +55,9 @@ class ColumnPathTest extends TestBase {
   }
 
   it should "work with tuples" in {
-    summon[ColumnPath.BuildFromTuple[Sample, EmptyTuple]] // geht
-    summon[ColumnPath.BuildFromTuple[Sample, Tuple1[ColumnPath[Sample, Int]]]] // geht
-    val s2                                 = summon[ColumnPath.BuildFromTuple[Sample, Tuple2[ColumnPath[Sample, Int], ColumnPath[Sample, Int]]]] // geht
+    summon[ColumnPath.BuildFromTuple[EmptyTuple]] // geht
+    summon[ColumnPath.BuildFromTuple[Tuple1[ColumnPath[Sample, Int]]]] // geht
+    val s2                                 = summon[ColumnPath.BuildFromTuple[Tuple2[ColumnPath[Sample, Int], ColumnPath[Sample, Int]]]] // geht
     val r2: ColumnPath[Sample, (Int, Int)] = s2.build(???)
     /*
     val foo1: ColumnPath[Sample, EmptyTuple] = EmptyTuple
@@ -70,18 +70,25 @@ class ColumnPathTest extends TestBase {
     summon[ColumnPath.BuildFromTuple[Sample, Tuple1[Int]]]
     val foo3: ColumnPath[Sample, (Int, Int)] = (path.x, path.y)
      */
-    val blubbi = summon[ColumnPath.BuildFromTuple[Sample, Tuple2[ColumnPath[Sample, Int], ColumnPath[Sample, Int]]]]
+    val blubbi = summon[ColumnPath.BuildFromTuple.Aux[Tuple2[ColumnPath[Sample, Int], ColumnPath[Sample, Int]], (Int, Int), Sample]]
     val foo: Tuple2[ColumnPath[Sample, Int], ColumnPath[Sample, Int]] = (path.x, path.y)
 
-    
+
+    /*
     val result: ColumnPath[Sample, (Int, Int)] = ColumnPath.fromTuple[
-      Sample, 
       Tuple2[ColumnPath[Sample, Int], ColumnPath[Sample, Int]]
     ](foo)
 
-    val result2: ColumnPath[Sample, (Int, Int)] = ColumnPath.fromTuple(foo)
-    
-    val resultX: ColumnPath[Sample, (Int, Int)] = ColumnPath.fromTuple(foo)(using blubbi) // TODO
+     */
+
+    val result2: ColumnPath[Sample, (Int, Int)] = ColumnPath.fromTuple[Tuple2[ColumnPath[Sample, Int], ColumnPath[Sample, Int]]](foo)
+    ColumnPath.fromTuple(EmptyTuple)
+    val d = Tuple1(path.x: ColumnPath[Sample, Int])
+    ColumnPath.fromTuple(d)
+    val blub = ColumnPath.fromTuple((path.x, path.y))
+    blub._3
+
+    // val resultX: ColumnPath[Sample, (Int, Int)] = ColumnPath.fromTuple(foo)(using blubbi) // TODO
 
   }
 

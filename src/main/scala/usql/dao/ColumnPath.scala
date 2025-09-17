@@ -3,6 +3,7 @@ package usql.dao
 import usql.SqlInterpolationParameter.SqlParameter
 import usql.{DataType, Sql, SqlIdentifier, SqlIdentifying, SqlInterpolationParameter, sql}
 
+import scala.annotation.implicitNotFound
 import scala.language.implicitConversions
 
 /**
@@ -35,42 +36,49 @@ object ColumnPath {
 
   def make[T](using f: SqlFielded[T]): ColumnPath[T, T] = ColumnPathImpl(f)
 
-  implicit def fromTuple[R, T <: Tuple](using b: BuildFromTuple[R, T])(in: T): ColumnPath[R, b.CombinedType] =
+  implicit def fromTuple[T](in: T)(using b: BuildFromTuple[T]): ColumnPath[b.Root, b.CombinedType] =
     b.build(in)
 
   private def emptyPath[R]: ColumnPath[R, EmptyTuple] = ???
 
   private def prependPath[R, H, T <: Tuple](head: ColumnPath[R, H], tail: ColumnPath[R, T]): ColumnPath[R, H *: T] = ???
 
-  trait BuildFromTuple[R, T <: Tuple] {
+  @implicitNotFound("Could not find BuildFromTuple")
+  trait BuildFromTuple[T] {
     type CombinedType <: Tuple
 
-    final type Result = ColumnPath[R, CombinedType]
+    type Root
 
-    def build(from: T): Result
+    def build(from: T): ColumnPath[Root, CombinedType]
   }
 
   object BuildFromTuple {
-    type Aux[R, T <: Tuple, C <: Tuple] = BuildFromTuple[R, T] {
+    type Aux[T, C <: Tuple, R] = BuildFromTuple[T] {
       type CombinedType = C
-    }
-  }
 
-  given buildFromEmptyTuple[R]: BuildFromTuple.Aux[R, EmptyTuple, EmptyTuple] =
-    new BuildFromTuple[R, EmptyTuple] {
-      override type CombinedType = EmptyTuple
-
-      override def build(from: EmptyTuple): Result = emptyPath[R]
+      type Root = R
     }
 
-  given buildFromIteration[R, H, T <: Tuple, TC <: Tuple](using tailBuild: BuildFromTuple.Aux[R, T, TC]): BuildFromTuple.Aux[
-    R,
-    (ColumnPath[R, H] *: T),
-    H *: TC
-  ] = new BuildFromTuple[R, ColumnPath[R, H] *: T] {
-    override type CombinedType = H *: TC
+    given buildFromEmptyTuple[R]: BuildFromTuple.Aux[EmptyTuple, EmptyTuple, R] =
+      new BuildFromTuple[EmptyTuple] {
+        override type CombinedType = EmptyTuple
 
-    override def build(from: (ColumnPath[R, H] *: T)): Result = prependPath(from.head, tailBuild.build(from.tail))
+        override type Root = R
+
+        override def build(from: EmptyTuple): ColumnPath[R, EmptyTuple] = emptyPath[R]
+      }
+
+    given buildFromIteration[H, T <: Tuple, R, TC <: Tuple](using tailBuild: BuildFromTuple.Aux[T, TC, R]): BuildFromTuple.Aux[
+      (ColumnPath[R, H] *: T),
+      H *: TC,
+      R
+    ] = new BuildFromTuple[ColumnPath[R, H] *: T] {
+      override type CombinedType = H *: TC
+
+      override type Root = R
+
+      override def build(from: (ColumnPath[R, H] *: T)): ColumnPath[R, CombinedType] = prependPath(from.head, tailBuild.build(from.tail))
+    }
   }
 
 }
