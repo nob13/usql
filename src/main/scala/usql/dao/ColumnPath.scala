@@ -35,7 +35,7 @@ object ColumnPath {
 
   def make[T](using f: SqlFielded[T]): ColumnPath[T, T] = ColumnPathImpl(f)
 
-  implicit def fromTuple[R, T <: Tuple, C <: Tuple](using b: BuildFromTuple.Aux[R, T, C])(in: T): ColumnPath[R, C] =
+  implicit def fromTuple[R, T <: Tuple](using b: BuildFromTuple[R, T])(in: T): ColumnPath[R, b.CombinedType] =
     b.build(in)
 
   private def emptyPath[R]: ColumnPath[R, EmptyTuple] = ???
@@ -63,12 +63,12 @@ object ColumnPath {
       override def build(from: EmptyTuple): Result = emptyPath[R]
     }
 
-  given buildFromIteration[R, H, T <: Tuple](using tailBuild: BuildFromTuple[R, T]): BuildFromTuple.Aux[
+  given buildFromIteration[R, H, T <: Tuple, TC <: Tuple](using tailBuild: BuildFromTuple.Aux[R, T, TC]): BuildFromTuple.Aux[
     R,
     (ColumnPath[R, H] *: T),
-    H *: tailBuild.CombinedType
+    H *: TC
   ] = new BuildFromTuple[R, ColumnPath[R, H] *: T] {
-    override type CombinedType = H *: tailBuild.CombinedType
+    override type CombinedType = H *: TC
 
     override def build(from: (ColumnPath[R, H] *: T)): Result = prependPath(from.head, tailBuild.build(from.tail))
   }

@@ -73,7 +73,15 @@ class ColumnPathTest extends TestBase {
     val blubbi = summon[ColumnPath.BuildFromTuple[Sample, Tuple2[ColumnPath[Sample, Int], ColumnPath[Sample, Int]]]]
     val foo: Tuple2[ColumnPath[Sample, Int], ColumnPath[Sample, Int]] = (path.x, path.y)
 
-    val result: ColumnPath[Sample, (Int, Int)] = ColumnPath.fromTuple(foo)(using blubbi) // TODO
+    
+    val result: ColumnPath[Sample, (Int, Int)] = ColumnPath.fromTuple[
+      Sample, 
+      Tuple2[ColumnPath[Sample, Int], ColumnPath[Sample, Int]]
+    ](foo)
+
+    val result2: ColumnPath[Sample, (Int, Int)] = ColumnPath.fromTuple(foo)
+    
+    val resultX: ColumnPath[Sample, (Int, Int)] = ColumnPath.fromTuple(foo)(using blubbi) // TODO
 
   }
 
