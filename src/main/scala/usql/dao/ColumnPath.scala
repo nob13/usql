@@ -32,7 +32,9 @@ trait ColumnPath[R, T] extends Selectable with SqlIdentifying with Rep[T] {
   def buildGetter: R => T
 
   /** The structure of T */
-  def structure: SqlFielded[T]
+  def structure: SqlFielded[T] | SqlColumn[T]
+
+  override def toInterpolationParameter: SqlInterpolationParameter = buildIdentifier
 }
 
 object ColumnPath {
@@ -42,9 +44,12 @@ object ColumnPath {
   implicit def fromTuple[T](in: T)(using b: BuildFromTuple[T]): ColumnPath[b.Root, b.CombinedType] =
     b.build(in)
 
-  private def emptyPath[R]: ColumnPath[R, EmptyTuple] = TupleColumnPath.Empty[R]()
+  private def emptyPath[R]: TupleColumnPath[R, EmptyTuple] = TupleColumnPath.Empty[R]()
 
-  private def prependPath[R, H, T <: Tuple](head: ColumnPath[R, H], tail: ColumnPath[R, T]): ColumnPath[R, H *: T] = {
+  private def prependPath[R, H, T <: Tuple](
+      head: ColumnPath[R, H],
+      tail: TupleColumnPath[R, T]
+  ): TupleColumnPath[R, H *: T] = {
     TupleColumnPath.Rec(head, tail)
   }
 
@@ -55,7 +60,7 @@ object ColumnPath {
 
     type Root
 
-    def build(from: T): ColumnPath[Root, CombinedType]
+    def build(from: T): TupleColumnPath[Root, CombinedType]
   }
 
   object BuildFromTuple {
@@ -71,10 +76,12 @@ object ColumnPath {
 
         override type Root = R
 
-        override def build(from: EmptyTuple): ColumnPath[R, EmptyTuple] = emptyPath[R]
+        override def build(from: EmptyTuple): TupleColumnPath[R, EmptyTuple] = emptyPath[R]
       }
 
-    given buildFromIteration[H, T <: Tuple, R, TC <: Tuple](using tailBuild: BuildFromTuple.Aux[T, TC, R]): BuildFromTuple.Aux[
+    given buildFromIteration[H, T <: Tuple, R, TC <: Tuple](
+        using tailBuild: BuildFromTuple.Aux[T, TC, R]
+    ): BuildFromTuple.Aux[
       (ColumnPath[R, H] *: T),
       H *: TC,
       R
@@ -83,7 +90,8 @@ object ColumnPath {
 
       override type Root = R
 
-      override def build(from: (ColumnPath[R, H] *: T)): ColumnPath[R, CombinedType] = prependPath(from.head, tailBuild.build(from.tail))
+      override def build(from: (ColumnPath[R, H] *: T)): TupleColumnPath[R, CombinedType] =
+        prependPath(from.head, tailBuild.build(from.tail))
     }
   }
 

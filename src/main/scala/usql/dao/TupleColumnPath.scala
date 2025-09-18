@@ -2,7 +2,9 @@ package usql.dao
 
 import usql.{SqlIdentifier, SqlInterpolationParameter}
 
-sealed trait TupleColumnPath[R, T <: Tuple] extends ColumnPath[R, T]
+sealed trait TupleColumnPath[R, T <: Tuple] extends ColumnPath[R, T] {
+  override def structure: SqlFielded[T]
+}
 
 object TupleColumnPath {
   case class Empty[R]() extends TupleColumnPath[R, EmptyTuple] {
@@ -29,8 +31,8 @@ object TupleColumnPath {
     _ => EmptyTuple
   )
 
-  case class Rec[R, H, T <: Tuple](head: ColumnPath[R, H],
-                                   tail: ColumnPath[R, T]) extends TupleColumnPath[R, H *: T] {
+  case class Rec[R, H, T <: Tuple](head: ColumnPath[R, H], tail: TupleColumnPath[R, T])
+      extends TupleColumnPath[R, H *: T] {
     override def selectDynamic(name: String): ColumnPath[R, _] = {
       val index = name.stripPrefix("_").toIntOption.getOrElse {
         throw new IllegalStateException(s"Unknown field: ${name}")
@@ -48,7 +50,7 @@ object TupleColumnPath {
 
     override def buildGetter: R => H *: T = {
       val tailGetters = tail.buildGetter
-      val headGetter = head.buildGetter
+      val headGetter  = head.buildGetter
       x => {
         headGetter(x) *: tailGetters(x)
       }
@@ -61,15 +63,27 @@ object TupleColumnPath {
     override def structure: SqlFielded[H *: T] = {
       val tailStructure = tail.structure
       SqlFielded.SimpleSqlFielded(
-        fields = Field.Group(
-          "_1",
-          ColumnGroupMapping.Anonymous,
-          SqlIdentifier.fromString("_1"),
-          head.structure
-        ) +: tailStructure.fields, // TODO: Umbenennung
+        fields = headField +: tailStructure.fields, // TODO: Umbenennung
         splitter = x => x.head :: tailStructure.split(x.tail).toList,
         builder = v => v.head.asInstanceOf[H] *: tailStructure.build(v.tail)
       )
+    }
+
+    private def headField: Field[T] = {
+      head.structure match {
+        case c: SqlColumn[T]  =>
+          Field.Column(
+            "_1",
+            c
+          )
+        case f: SqlFielded[T] =>
+          Field.Group(
+            "_1",
+            ColumnGroupMapping.Anonymous,
+            SqlIdentifier.fromString("_1"),
+            f
+          )
+      }
     }
   }
 }

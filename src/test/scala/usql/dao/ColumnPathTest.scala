@@ -77,6 +77,9 @@ class ColumnPathTest extends TestBase {
     // Fielded of one tuple --> The one of the parent
     // Sub fields --> Fielded, if possible
     // Not columnar, as we have logical names for groups
+    
+    // Aber es kann auch ein Ein-Tupel sein!
+    
     // TODO
   }
 }

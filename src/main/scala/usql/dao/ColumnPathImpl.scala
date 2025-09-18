@@ -3,6 +3,83 @@ package usql.dao
 import usql.dao.ColumnPathImpl.{FieldedWalker, Walker}
 import usql.{SqlIdentifier, SqlInterpolationParameter}
 
+private[usql] case class ColumnPathAlias[R, T](underlying: ColumnPath[R, T], alias: String) extends ColumnPath[R, T] {
+  override def selectDynamic(name: String): ColumnPath[R, _] = {
+    copy(
+      underlying = underlying.selectDynamic(name)
+    )
+  }
+
+  override def ![X](using ev: T => Option[X]): ColumnPath[R, X] = {
+    copy(
+      underlying = underlying.!
+    )
+  }
+
+  override def buildGetter: R => T = {
+    underlying.buildGetter
+  }
+
+  override def structure: SqlFielded[T] | SqlColumn[T] = {
+    // So correct?
+    underlying.structure
+  }
+
+  override def buildIdentifier: Seq[SqlIdentifier] = {
+    underlying.buildIdentifier.map(_.copy(alias = Some(alias)))
+  }
+}
+
+private[usql] abstract class ColumnPathAtFielded[R, T](fielded: SqlFielded[T]) extends ColumnPath[R, T] {
+  override def selectDynamic(name: String): ColumnPath[R, _] = ???
+
+  override def ![X](using ev: T => Option[X]): ColumnPath[R, X] = ???
+
+  override def structure: SqlFielded[T] = fielded
+}
+
+private[usql] case class ColumnPathStart[R](fielded: SqlFielded[R]) extends ColumnPathAtFielded[R, R](fielded) {
+
+  override def buildGetter: R => R = identity
+
+  override def buildIdentifier: Seq[SqlIdentifier] = fielded.columns.map(_.id)
+}
+
+private[usql] case class ColumnPathSelectGroup[R, P, T](
+    group: Field.Group[T],
+    mapping: SqlIdentifier => SqlIdentifier,
+    parent: ColumnPath[R, P],
+    getter: R => T
+) extends ColumnPathAtFielded[R, T](group.fielded) {
+  override def buildGetter: R => T = {
+    getter
+  }
+
+  override def buildIdentifier: Seq[SqlIdentifier] = {
+    group.columns.map(c => mapping(c.id))
+  }
+}
+
+private [usql] case class ColumnPathSelectColumn[R, P, T](
+    column: SqlColumn[T],
+    mapping: SqlIdentifier => SqlIdentifier,
+    parent: ColumnPath[R, P],
+    getter: R => T) extends ColumnPath[R, T] {
+  override def selectDynamic(name: String): ColumnPath[R, _] = {
+    throw new IllegalStateException(s"Can walk further column")
+  }
+
+  override def ![X](using ev: T => Option[X]): ColumnPath[R, X] = {
+    throw new NotImplementedError(s"Unacking option is not implemented here!")
+  }
+
+  override def buildGetter: R => T = getter
+
+  override def structure: SqlFielded[T] | SqlColumn[T] = column
+
+  override def buildIdentifier: Seq[SqlIdentifier] = Seq(mapping(column.id))
+}
+
 private[usql] case class ColumnPathImpl[R, T](
     root: SqlFielded[R],
     fields: List[String] = Nil,
