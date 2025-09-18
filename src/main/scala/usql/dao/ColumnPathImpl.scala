@@ -1,6 +1,5 @@
 package usql.dao
 
-import usql.dao.ColumnPathImpl.{FieldedWalker, Walker}
 import usql.{SqlIdentifier, SqlInterpolationParameter}
 
 private[usql] case class ColumnPathAlias[R, T](underlying: ColumnPath[R, T], alias: String) extends ColumnPath[R, T] {
@@ -30,15 +29,49 @@ private[usql] case class ColumnPathAlias[R, T](underlying: ColumnPath[R, T], ali
   }
 }
 
-private[usql] abstract class ColumnPathAtFielded[R, T](fielded: SqlFielded[T]) extends ColumnPath[R, T] {
-  override def selectDynamic(name: String): ColumnPath[R, _] = ???
+private[usql] abstract class ColumnPathAtFielded[R, T](
+    fielded: SqlFielded[T],
+    mapping: SqlIdentifier => SqlIdentifier,
+    getter: R => T
+) extends ColumnPath[R, T] {
+  override def selectDynamic(name: String): ColumnPath[R, _] = {
+    val (field, fieldIdx) = fielded.fields.view.zipWithIndex.find(_._1.fieldName == name).getOrElse {
+      throw new IllegalStateException(s"Unknown field ${name}")
+    }
+    selectField(name: String, field, fieldIdx)
+  }
+
+  private def selectField[X](name: String, field: Field[X], fieldIdx: Int): ColumnPath[R, X] = {
+    val subGetter: T => X = (value) => {
+      val splitted = fielded.split(value)
+      splitted.apply(fieldIdx).asInstanceOf[X]
+    }
+    val newGetter: R => X = getter.andThen(subGetter)
+
+    field match {
+      case c: Field.Column[X] =>
+        ColumnPathSelectColumn(c.column, mapping, this, newGetter)
+      case g: Field.Group[X]  =>
+        val newMapping: SqlIdentifier => SqlIdentifier =
+          in => mapping(g.mapping.map(g.columnBaseName, in))
+        println(s"Entering ${name}, previous: xxx => ${mapping(SqlIdentifier.fromString("xxx"))}, newMapping: xxx => ${newMapping(SqlIdentifier.fromString("xxx"))}")
+        ColumnPathSelectGroup(g, newMapping, this, newGetter)
+    }
+  }
 
   override def ![X](using ev: T => Option[X]): ColumnPath[R, X] = ???
 
   override def structure: SqlFielded[T] = fielded
+
+  override def buildGetter: R => T = getter
 }
 
-private[usql] case class ColumnPathStart[R](fielded: SqlFielded[R]) extends ColumnPathAtFielded[R, R](fielded) {
+private[usql] case class ColumnPathStart[R](fielded: SqlFielded[R])
+    extends ColumnPathAtFielded[R, R](
+      fielded,
+      mapping = identity,
+      getter = identity
+    ) {
 
   override def buildGetter: R => R = identity
 
@@ -50,21 +83,19 @@ private[usql] case class ColumnPathSelectGroup[R, P, T](
     mapping: SqlIdentifier => SqlIdentifier,
     parent: ColumnPath[R, P],
     getter: R => T
-) extends ColumnPathAtFielded[R, T](group.fielded) {
-  override def buildGetter: R => T = {
-    getter
-  }
+) extends ColumnPathAtFielded[R, T](group.fielded, mapping, getter) {
 
   override def buildIdentifier: Seq[SqlIdentifier] = {
     group.columns.map(c => mapping(c.id))
   }
 }
 
-private [usql] case class ColumnPathSelectColumn[R, P, T](
+private[usql] case class ColumnPathSelectColumn[R, P, T](
     column: SqlColumn[T],
     mapping: SqlIdentifier => SqlIdentifier,
     parent: ColumnPath[R, P],
-    getter: R => T) extends ColumnPath[R, T] {
+    getter: R => T
+) extends ColumnPath[R, T] {
   override def selectDynamic(name: String): ColumnPath[R, _] = {
     throw new IllegalStateException(s"Can walk further column")
   }
@@ -80,6 +111,7 @@ private [usql] case class ColumnPathSelectColumn[R, P, T](
   override def buildIdentifier: Seq[SqlIdentifier] = Seq(mapping(column.id))
 }
 
+/*
 private[usql] case class ColumnPathImpl[R, T](
     root: SqlFielded[R],
     fields: List[String] = Nil,
@@ -186,3 +218,4 @@ private[usql] object ColumnPathImpl {
     override def get(root: R): T = getter(root)
   }
 }
+ */

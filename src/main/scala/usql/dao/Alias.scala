@@ -23,5 +23,7 @@ case class Alias[T](
   }
 
   /** Access to aliased cols. */
-  def col: ColumnPath[T, T] = ColumnPathImpl(tabular, Nil, alias = Some(aliasName))
+  def col: ColumnPath[T, T] = {
+    tabular.cols.withAlias(aliasName)
+  }
 }

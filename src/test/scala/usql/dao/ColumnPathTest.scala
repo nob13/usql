@@ -69,6 +69,8 @@ class ColumnPathTest extends TestBase {
 
   it should "work with optionals" in {
     // TODO
+
+    pending
   }
 
   it should "provide a fielded for each" in {
@@ -77,9 +79,10 @@ class ColumnPathTest extends TestBase {
     // Fielded of one tuple --> The one of the parent
     // Sub fields --> Fielded, if possible
     // Not columnar, as we have logical names for groups
-    
+
     // Aber es kann auch ein Ein-Tupel sein!
-    
+
     // TODO
+    pending
   }
 }

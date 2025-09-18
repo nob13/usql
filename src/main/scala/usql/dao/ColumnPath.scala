@@ -33,13 +33,15 @@ trait ColumnPath[R, T] extends Selectable with SqlIdentifying with Rep[T] {
 
   /** The structure of T */
   def structure: SqlFielded[T] | SqlColumn[T]
+  
+  def withAlias(alias: String): ColumnPath[R, T] = ColumnPathAlias(this, alias)
 
   override def toInterpolationParameter: SqlInterpolationParameter = buildIdentifier
 }
 
 object ColumnPath {
 
-  def make[T](using f: SqlFielded[T]): ColumnPath[T, T] = ColumnPathImpl(f)
+  def make[T](using f: SqlFielded[T]): ColumnPath[T, T] = ColumnPathStart(f)
 
   implicit def fromTuple[T](in: T)(using b: BuildFromTuple[T]): ColumnPath[b.Root, b.CombinedType] =
     b.build(in)
