@@ -7,7 +7,8 @@ import usql.profiles.BasicProfile.*
 class ColumnPathTest extends TestBase {
 
   case class SubSubElement(
-      foo: Boolean
+      foo: Boolean,
+      bar: Int
   ) derives SqlFielded
 
   case class SubElement(
@@ -33,18 +34,20 @@ class ColumnPathTest extends TestBase {
       a = 101,
       b = "Hello",
       sub2 = SubSubElement(
-        true
+        true,
+        123
       )
     )
   )
 
   it should "fetch identifiers" in {
-    path.x.buildIdentifier shouldBe SqlIdentifier.fromString("x")
-    path.sub.a.buildIdentifier shouldBe SqlIdentifier.fromString("a")
-    intercept[IllegalStateException] {
-      path.sub.sub2.buildIdentifier
-    }
-    path.sub.sub2.foo.buildIdentifier shouldBe SqlIdentifier.fromString("sub2_foo")
+    path.x.buildIdentifier shouldBe Seq(SqlIdentifier.fromString("x"))
+    path.sub.a.buildIdentifier shouldBe Seq(SqlIdentifier.fromString("a"))
+    path.sub.sub2.buildIdentifier shouldBe Seq(
+      SqlIdentifier.fromString("sub2_foo"),
+      SqlIdentifier.fromString("sub2_bar")
+    )
+    path.sub.sub2.foo.buildIdentifier shouldBe Seq(SqlIdentifier.fromString("sub2_foo"))
   }
 
   it should "fetch elements" in {
@@ -69,6 +72,11 @@ class ColumnPathTest extends TestBase {
   }
 
   it should "provide a fielded for each" in {
+    // Fielded of single projection --> Column
+    // Fielded of empty tuple --> Empty
+    // Fielded of one tuple --> The one of the parent
+    // Sub fields --> Fielded, if possible
+    // Not columnar, as we have logical names for groups
     // TODO
   }
 }

@@ -31,7 +31,7 @@ private[usql] case class ColumnPathImpl[R, T](
   }
 
   override def buildIdentifier: Seq[SqlIdentifier] = {
-    Seq(walker.id.copy(alias = alias))
+    walker.ids.map(_.copy(alias = alias))
   }
 
   override def toInterpolationParameter: SqlInterpolationParameter = buildIdentifier
@@ -45,7 +45,7 @@ private[usql] object ColumnPathImpl {
   trait Walker[R, T] {
     def select(field: String): Walker[R, ?]
 
-    def id: SqlIdentifier
+    def ids: Seq[SqlIdentifier]
 
     def get(root: R): T
   }
@@ -80,8 +80,10 @@ private[usql] object ColumnPathImpl {
       }
     }
 
-    override def id: SqlIdentifier = {
-      throw new IllegalStateException("Not at a final field")
+    override def ids: Seq[SqlIdentifier] = {
+      model.columns.map { column =>
+        mapping(column.id)
+      }
     }
 
     override def get(root: R): T = {
@@ -98,7 +100,7 @@ private[usql] object ColumnPathImpl {
       throw new IllegalStateException(s"Can walk further column")
     }
 
-    override def id: SqlIdentifier = mapping(column.column.id)
+    override def ids: Seq[SqlIdentifier] = Seq(mapping(column.column.id))
 
     override def get(root: R): T = getter(root)
   }
