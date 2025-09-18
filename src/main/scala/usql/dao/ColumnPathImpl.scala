@@ -39,6 +39,10 @@ private[usql] case class ColumnPathImpl[R, T](
   override def buildGetter: R => T = {
     walker.get
   }
+
+  override def structure: SqlFielded[T] = {
+    ???
+  }
 }
 
 private[usql] object ColumnPathImpl {

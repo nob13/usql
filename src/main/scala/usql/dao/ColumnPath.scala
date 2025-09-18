@@ -30,6 +30,9 @@ trait ColumnPath[R, T] extends Selectable with SqlIdentifying with Rep[T] {
 
   /** Build a getter for this field from the base type. */
   def buildGetter: R => T
+
+  /** The structure of T */
+  def structure: SqlFielded[T]
 }
 
 object ColumnPath {

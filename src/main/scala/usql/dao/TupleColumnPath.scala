@@ -19,7 +19,15 @@ object TupleColumnPath {
     override def toInterpolationParameter: SqlInterpolationParameter = SqlInterpolationParameter.Empty
 
     override def buildIdentifier: Seq[SqlIdentifier] = Nil
+
+    override def structure: SqlFielded[EmptyTuple] = emptyStructure
   }
+
+  private val emptyStructure: SqlFielded[EmptyTuple] = SqlFielded.SimpleSqlFielded(
+    Nil,
+    _ => Nil,
+    _ => EmptyTuple
+  )
 
   case class Rec[R, H, T <: Tuple](head: ColumnPath[R, H],
                                    tail: ColumnPath[R, T]) extends TupleColumnPath[R, H *: T] {
@@ -49,5 +57,19 @@ object TupleColumnPath {
     override def toInterpolationParameter: SqlInterpolationParameter = buildIdentifier
 
     override def buildIdentifier: Seq[SqlIdentifier] = head.buildIdentifier ++ tail.buildIdentifier
+
+    override def structure: SqlFielded[H *: T] = {
+      val tailStructure = tail.structure
+      SqlFielded.SimpleSqlFielded(
+        fields = Field.Group(
+          "_1",
+          ColumnGroupMapping.Anonymous,
+          SqlIdentifier.fromString("_1"),
+          head.structure
+        ) +: tailStructure.fields, // TODO: Umbenennung
+        splitter = x => x.head :: tailStructure.split(x.tail).toList,
+        builder = v => v.head.asInstanceOf[H] *: tailStructure.build(v.tail)
+      )
+    }
   }
 }
