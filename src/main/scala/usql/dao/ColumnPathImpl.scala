@@ -109,7 +109,7 @@ private[usql] case class ColumnPathSelectColumn[R, P, T](
   }
 
   override def ![X](using ev: T => Option[X]): ColumnPath[R, X] = {
-    throw new NotImplementedError(s"Unacking option is not implemented here!")
+    throw new NotImplementedError(s"Unpacking option is not implemented here!")
   }
 
   override def buildGetter: R => T = getter

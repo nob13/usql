@@ -1,6 +1,6 @@
 package usql.dao
 
-import usql.SqlIdentifier
+import usql.{DataType, SqlIdentifier}
 import usql.util.TestBase
 import usql.profiles.BasicProfile.*
 
@@ -73,16 +73,15 @@ class ColumnPathTest extends TestBase {
     pending
   }
 
-  it should "provide a fielded for each" in {
-    // Fielded of single projection --> Column
-    // Fielded of empty tuple --> Empty
-    // Fielded of one tuple --> The one of the parent
-    // Sub fields --> Fielded, if possible
-    // Not columnar, as we have logical names for groups
-
-    // Aber es kann auch ein Ein-Tupel sein!
-
-    // TODO
-    pending
+  it should "provide a structure for each" in {
+    path.x.structure shouldBe SqlColumn("x", DataType.get[Int])
+    path.sub.sub2.foo.structure shouldBe SqlColumn("sub2_foo", DataType.get[Boolean])
+    val substructure: SqlFielded[SubSubElement] = path.sub.sub2.structure.asInstanceOf[SqlFielded[SubSubElement]]
+    substructure.columns.map(_.id.name) shouldBe Seq(
+      "sub2_foo",
+      "sub2_bar"
+    )
+    path.structure shouldBe Sample.derived$SqlFielded
+    val subStructure                            = path.sub.structure.asInstanceOf[SqlFielded[SubElement]]
   }
 }
