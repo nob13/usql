@@ -32,7 +32,7 @@ object TupleColumnPath {
     _ => Nil,
     _ => EmptyTuple
   )
-
+  
   case class Rec[R, H, T <: Tuple](head: ColumnPath[R, H], tail: TupleColumnPath[R, T])
       extends TupleColumnPath[R, H *: T] {
     override def selectDynamic(name: String): ColumnPath[R, _] = {

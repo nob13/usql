@@ -68,9 +68,18 @@ class ColumnPathTest extends TestBase {
   }
 
   it should "work with optionals" in {
-    // TODO
+    val rootPath: ColumnPath[Option[Sample], Option[Sample]] = ColumnPath.makeOpt
 
-    pending
+    // TODO: Das haut nicht hin, x packt das ganze aus, der ColumnPath müsste die ganze Zeit Option als Return wert haben
+    val x = rootPath.!.x
+
+    x.structure.columns shouldBe Seq(
+      SqlColumn("x", DataType.get[Option[Int]])
+    )
+
+    // val getter = x.buildGetter
+    // getter(None) shouldBe None
+    // getter(Some(sample)) shouldBe sample.x
   }
 
   it should "provide a structure for each" in {

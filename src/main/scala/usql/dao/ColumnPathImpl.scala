@@ -29,6 +29,28 @@ private[usql] case class ColumnPathAlias[R, T](underlying: ColumnPath[R, T], ali
   }
 }
 
+private[usql] case class ColumnPathOpt[R](fielded: SqlFielded[R]) extends ColumnPath[Option[R], Option[R]] {
+  override def selectDynamic(name: String): ColumnPath[Option[R], _] = {
+    throw new IllegalArgumentException(s"Can't select field in option, use !")
+  }
+
+  override def ![X](using ev: Option[R] => Option[X]): ColumnPath[Option[R], X] = {
+    ???
+  }
+
+  override def buildGetter: Option[R] => Option[R] = {
+    identity
+  }
+
+  override def structure: SqlFielded[Option[R]] | SqlColumn[Option[R]] = {
+    ???
+  }
+
+  override def buildIdentifier: Seq[SqlIdentifier] = {
+    fielded.columns.map(_.id)
+  }
+}
+
 private[usql] abstract class ColumnPathAtFielded[R, T](
     fielded: SqlFielded[T],
     parentMapping: SqlIdentifier => SqlIdentifier
