@@ -108,9 +108,11 @@ object Field {
     override def columns: Seq[SqlColumn[?]] =
       fielded.columns.map { column =>
         column.copy(
-          id = mapping.map(columnBaseName, column.id)
+          id = mapChildColumnName(column.id)
         )
       }
+
+    def mapChildColumnName(childColumnId: SqlIdentifier): SqlIdentifier = mapping.map(columnBaseName, childColumnId)
 
     override def decoder: RowDecoder[T] = fielded.rowDecoder
 
