@@ -75,7 +75,11 @@ class ColumnPathTest extends TestBase {
     /*
     Idee für die Umsetzung:
     - Wir haben einen speziellen OptionalColumnPath der immer optionale Werte mitschleppt und returned. Dazu muss
-    im Idealfall der ColumnPath spezialisiert werden, so dass unterschiedliche Werte rausgegeben werden können!
+    - im Idealfall der ColumnPath spezialisiert werden, so dass unterschiedliche Werte rausgegeben werden können!
+    Es muss auch mit dem restlichen Mist zusammenpassen
+
+    Der Ausrufezeichenoperator fällt dann auch komplett weg, da man dann das eigentliche Objekt traversiert, aber immer ein Mapping
+    auf einen optionalen Wert bekommt.
      */
 
     val x = rootPath.!.x
