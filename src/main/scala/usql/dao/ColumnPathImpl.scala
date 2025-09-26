@@ -63,7 +63,10 @@ private[usql] abstract class ColumnPathAtFielded[R, T](
 
   override def ![X](using ev: T => Option[X]): ColumnPath[R, X] = ???
 
-  override def structure: SqlFielded[T] = fielded
+  override def structure: SqlFielded[T] = {
+    // TODO: Geht das hier schon?!
+    SqlFielded.MappedSqlFielded(fielded, parentMapping)
+  }
 }
 
 private[usql] case class ColumnPathStart[R](fielded: SqlFielded[R])
@@ -117,7 +120,11 @@ private[usql] case class ColumnPathSelectColumn[R, P, T](
     root => subGetter(parentGetter(root))
   }
 
-  override def structure: SqlFielded[T] | SqlColumn[T] = column
+  override def structure: SqlFielded[T] | SqlColumn[T] = {
+    column.copy(
+      id = mapping(column.id)
+    )
+  }
 
   override def buildIdentifier: Seq[SqlIdentifier] = {
     Seq(mapping(column.id))

@@ -69,6 +69,25 @@ object SqlFielded {
   inline def derived[T <: Product: Mirror.ProductOf](using nm: NameMapping = NameMapping.Default): SqlFielded[T] =
     Macros.buildFielded[T]
 
+  case class MappedSqlFielded[T](underlying: SqlFielded[T], mapping: SqlIdentifier => SqlIdentifier)
+      extends SqlFielded[T] {
+    override def fields: Seq[Field[_]] = underlying.fields.map {
+      case c: Field.Column[?] =>
+        c.copy(
+          column = c.column.copy(
+            id = mapping(c.column.id)
+          )
+        )
+      case g: Field.Group[?]  =>
+        g.copy(
+          mapping = ColumnGroupMapping.Mapped(g.mapping, mapping)
+        )
+    }
+
+    override protected[dao] def split(value: T): Seq[Any] = underlying.split(value)
+
+    override protected[dao] def build(fieldValues: Seq[Any]): T = underlying.build(fieldValues)
+  }
 }
 
 /** A Field of a case class. */
