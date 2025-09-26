@@ -71,6 +71,13 @@ class ColumnPathTest extends TestBase {
     val rootPath: ColumnPath[Option[Sample], Option[Sample]] = ColumnPath.makeOpt
 
     // TODO: Das haut nicht hin, x packt das ganze aus, der ColumnPath müsste die ganze Zeit Option als Return wert haben
+
+    /*
+    Idee für die Umsetzung:
+    - Wir haben einen speziellen OptionalColumnPath der immer optionale Werte mitschleppt und returned. Dazu muss
+    im Idealfall der ColumnPath spezialisiert werden, so dass unterschiedliche Werte rausgegeben werden können!
+     */
+
     val x = rootPath.!.x
 
     x.structure.columns shouldBe Seq(
