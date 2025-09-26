@@ -3,7 +3,9 @@ package usql.dao
 import usql.{SqlIdentifier, SqlInterpolationParameter}
 
 sealed trait TupleColumnPath[R, T <: Tuple] extends ColumnPath[R, T] {
-  override def structure: SqlFielded[T]
+  final override def structure: SqlFielded[T] = structureAt(1)
+
+  def structureAt(tupleIdx: Int): SqlFielded[T]
 }
 
 object TupleColumnPath {
@@ -22,7 +24,7 @@ object TupleColumnPath {
 
     override def buildIdentifier: Seq[SqlIdentifier] = Nil
 
-    override def structure: SqlFielded[EmptyTuple] = emptyStructure
+    override def structureAt(tupleIdx: Int): SqlFielded[EmptyTuple] = emptyStructure
   }
 
   private val emptyStructure: SqlFielded[EmptyTuple] = SqlFielded.SimpleSqlFielded(
@@ -60,27 +62,27 @@ object TupleColumnPath {
 
     override def buildIdentifier: Seq[SqlIdentifier] = head.buildIdentifier ++ tail.buildIdentifier
 
-    override def structure: SqlFielded[H *: T] = {
-      val tailStructure = tail.structure
+    override def structureAt(tupleIdx: Int): SqlFielded[H *: T] = {
+      val tailStructure = tail.structureAt(tupleIdx + 1)
       SqlFielded.SimpleSqlFielded(
-        fields = headField +: tailStructure.fields, // TODO: Umbenennung
+        fields = headField(tupleIdx) +: tailStructure.fields,
         splitter = x => x.head :: tailStructure.split(x.tail).toList,
         builder = v => v.head.asInstanceOf[H] *: tailStructure.build(v.tail)
       )
     }
 
-    private def headField: Field[T] = {
+    private def headField(tupleIdx: Int): Field[T] = {
       head.structure match {
         case c: SqlColumn[T]  =>
           Field.Column(
-            "_1",
+            s"_${tupleIdx}",
             c
           )
         case f: SqlFielded[T] =>
           Field.Group(
-            "_1",
+            s"_${tupleIdx}",
             ColumnGroupMapping.Anonymous,
-            SqlIdentifier.fromString("_1"),
+            SqlIdentifier.fromString(s"_${tupleIdx}"),
             f
           )
       }

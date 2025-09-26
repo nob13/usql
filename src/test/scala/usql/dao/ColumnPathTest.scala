@@ -76,7 +76,7 @@ class ColumnPathTest extends TestBase {
   it should "provide a structure for each" in {
     path.x.structure shouldBe SqlColumn("x", DataType.get[Int])
     path.sub.sub2.foo.structure shouldBe SqlColumn("sub2_foo", DataType.get[Boolean])
-    
+
     val substructure: SqlFielded[SubSubElement] = path.sub.sub2.structure.asInstanceOf[SqlFielded[SubSubElement]]
     substructure.columns.map(_.id.name) shouldBe Seq(
       "sub2_foo",
@@ -84,5 +84,12 @@ class ColumnPathTest extends TestBase {
     )
     path.structure shouldBe Sample.derived$SqlFielded
     val subStructure                            = path.sub.structure.asInstanceOf[SqlFielded[SubElement]]
+
+    val pair: ColumnPath[Sample, (Int, Int)] = (path.x, path.y)
+    pair.structure.columns.map(_.id.name) shouldBe Seq(
+      "x",
+      "y"
+    )
+    pair.structure.asInstanceOf[SqlFielded[(Int, Int)]].fields.map(_.fieldName) shouldBe Seq("_1", "_2")
   }
 }

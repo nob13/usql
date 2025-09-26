@@ -46,26 +46,27 @@ private[usql] abstract class ColumnPathAtFielded[R, T](
       splitted.apply(fieldIdx).asInstanceOf[X]
     }
 
-    val newMapping: SqlIdentifier => SqlIdentifier = { in =>
-      parentMapping(currentMapping(in))
-    }
-
     field match {
       case c: Field.Column[X] =>
-        ColumnPathSelectColumn(c.column, newMapping, this, subGetter)
+        ColumnPathSelectColumn(c.column, childrenMapping, this, subGetter)
       case g: Field.Group[X]  =>
-        ColumnPathSelectGroup(g, newMapping, this, subGetter)
+        ColumnPathSelectGroup(g, childrenMapping, this, subGetter)
     }
   }
 
   /** Returns the column name mapping of the current element. */
   protected def currentMapping: SqlIdentifier => SqlIdentifier = identity
 
+  private def childrenMapping: SqlIdentifier => SqlIdentifier = {
+    val pm = parentMapping
+    val cm = currentMapping
+    in => pm(cm(in))
+  }
+
   override def ![X](using ev: T => Option[X]): ColumnPath[R, X] = ???
 
   override def structure: SqlFielded[T] = {
-    // TODO: Geht das hier schon?!
-    SqlFielded.MappedSqlFielded(fielded, parentMapping)
+    SqlFielded.MappedSqlFielded(fielded, childrenMapping)
   }
 }
 
@@ -78,6 +79,8 @@ private[usql] case class ColumnPathStart[R](fielded: SqlFielded[R])
   override def buildGetter: R => R = identity
 
   override def buildIdentifier: Seq[SqlIdentifier] = fielded.columns.map(_.id)
+
+  override def structure: SqlFielded[R] = fielded
 }
 
 private[usql] case class ColumnPathSelectGroup[R, P, T](
