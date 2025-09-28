@@ -27,7 +27,7 @@ trait ColumnPath[R, T] extends Selectable with SqlIdentifying with Rep[T] {
 
   /** Unpack an option. */
   def ![X](using ev: T => Option[X]): ColumnPathOpt[R, X]
-
+  
   /** Build a getter for this field from the base type. */
   def buildGetter: R => T
 

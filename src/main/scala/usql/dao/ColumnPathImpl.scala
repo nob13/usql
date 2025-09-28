@@ -30,48 +30,33 @@ private[usql] case class ColumnPathAlias[R, T](underlying: ColumnPath[R, T], ali
   }
 }
 
-private[usql] case class ColumnPathOptImpl[R, T](underlying: ColumnPath[R, T]) extends ColumnPathOpt[R, T] {
-  override def selectDynamic(name: String): ColumnPathOpt[R, _] = {
-    ColumnPathOptImpl(underlying.selectDynamic(name))
+private[usql] case class ColumnPathStartingOpt[R, T](path: ColumnPath[R, T]) extends ColumnPath[Option[R], Option[T]] {
+  override def selectDynamic(name: String): ColumnPath[Option[R], _] = {
+    ColumnPathStartingOpt(path.selectDynamic(name))
   }
 
-  override def ![X](using ev: T => Option[X]): ColumnPathOpt[R, X] = {
-    underlying.!
+  override def ![X](using ev: Option[T] => Option[X]): ColumnPathOpt[Option[R], X] = {
+    ColumnPathOptImpl(this.asInstanceOf[ColumnPath[Option[R], Option[X]]])
   }
 
-  override def buildGetter: R => Option[T] = {
-    val underlyingGetter = underlying.buildGetter
-    in => Some(underlyingGetter(in))
+  override def buildGetter: Option[R] => Option[T] = {
+    val underlyingGetter = path.buildGetter
+    it => it.map(underlyingGetter)
   }
 
   override def structure: SqlFielded[Option[T]] | SqlColumn[Option[T]] = {
-    underlying.structure match {
+    path.structure match {
       case f: SqlFielded[T] =>
+        // TODO!
         ???
       case c: SqlColumn[T]  =>
-        ???
+        c.copy(
+          dataType = DataType.OptionalDataType(c.dataType)
+        )
     }
   }
 
-  override def withAlias(alias: String): ColumnPathOpt[R, T] = ???
-
-  override def buildIdentifier: Seq[SqlIdentifier] = ???
-}
-
-private[usql] case class ColumnPathStartingOpt[R](start: ColumnPathStart[R]) extends ColumnPath[Option[R], Option[R]] {
-  override def selectDynamic(name: String): ColumnPath[Option[R], _] = {
-    throw new IllegalArgumentException(s"Can only select!")
-  }
-
-  override def ![X](using ev: Option[R] => Option[X]): ColumnPathOpt[Option[R], X] = {
-    ???
-  }
-
-  override def buildGetter: Option[R] => Option[R] = ???
-
-  override def structure: SqlFielded[Option[R]] | SqlColumn[Option[R]] = ???
-
-  override def buildIdentifier: Seq[SqlIdentifier] = ???
+  override def buildIdentifier: Seq[SqlIdentifier] = path.buildIdentifier
 }
 
 private[usql] abstract class ColumnPathAtFielded[R, T](
