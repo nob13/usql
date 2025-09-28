@@ -94,4 +94,21 @@ object DataType {
   }
 
   def get[T](using dt: DataType[T]): DataType[T] = dt
+
+  case class OptionalDataType[T](underlying: DataType[T]) extends DataType[Option[T]] {
+    override def extractBySqlIdx(cIdx: Int, rs: ResultSet): Option[T] = {
+      underlying.extractOptionalBySqlIdx(cIdx, rs)
+    }
+
+    override def fillBySqlIdx(pIdx: Int, ps: PreparedStatement, value: Option[T]): Unit = {
+      value match {
+        case None    => ps.setNull(pIdx, jdbcType.getVendorTypeNumber)
+        case Some(v) => underlying.fillBySqlIdx(pIdx, ps, v)
+      }
+    }
+
+    override def jdbcType: JDBCType = underlying.jdbcType
+  }
+
+  implicit def optionType[T](using dt: DataType[T]): DataType[Option[T]] = new OptionalDataType(dt)
 }

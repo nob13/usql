@@ -33,21 +33,6 @@ trait BasicProfile {
 
   implicit val instantType: DataType[Instant] = timestampType.adapt[Instant](_.toInstant, Timestamp.from)
 
-  implicit def optionType[T](using dt: DataType[T]): DataType[Option[T]] = new DataType[Option[T]] {
-    override def extractBySqlIdx(cIdx: Int, rs: ResultSet): Option[T] = {
-      dt.extractOptionalBySqlIdx(cIdx, rs)
-    }
-
-    override def fillBySqlIdx(pIdx: Int, ps: PreparedStatement, value: Option[T]): Unit = {
-      value match {
-        case None    => ps.setNull(pIdx, jdbcType.getVendorTypeNumber)
-        case Some(v) => dt.fillBySqlIdx(pIdx, ps, v)
-      }
-    }
-
-    override def jdbcType: JDBCType = dt.jdbcType
-  }
-
   implicit val arrayType: DataType[java.sql.Array] = new DataType[java.sql.Array] {
     override def jdbcType: JDBCType = JDBCType.ARRAY
 

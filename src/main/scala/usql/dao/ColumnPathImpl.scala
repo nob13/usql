@@ -1,6 +1,6 @@
 package usql.dao
 
-import usql.{SqlIdentifier, SqlInterpolationParameter}
+import usql.{DataType, SqlIdentifier, SqlInterpolationParameter}
 
 private[usql] case class ColumnPathAlias[R, T](underlying: ColumnPath[R, T], alias: String) extends ColumnPath[R, T] {
   override def selectDynamic(name: String): ColumnPath[R, _] = {
@@ -9,10 +9,11 @@ private[usql] case class ColumnPathAlias[R, T](underlying: ColumnPath[R, T], ali
     )
   }
 
-  override def ![X](using ev: T => Option[X]): ColumnPath[R, X] = {
-    copy(
-      underlying = underlying.!
-    )
+  override def ![X](using ev: T => Option[X]): ColumnPathOpt[R, X] = {
+    ???
+    // copy(
+    //  underlying = underlying.!
+    // )
   }
 
   override def buildGetter: R => T = {
@@ -29,26 +30,48 @@ private[usql] case class ColumnPathAlias[R, T](underlying: ColumnPath[R, T], ali
   }
 }
 
-private[usql] case class ColumnPathOpt[R](fielded: SqlFielded[R]) extends ColumnPath[Option[R], Option[R]] {
+private[usql] case class ColumnPathOptImpl[R, T](underlying: ColumnPath[R, T]) extends ColumnPathOpt[R, T] {
+  override def selectDynamic(name: String): ColumnPathOpt[R, _] = {
+    ColumnPathOptImpl(underlying.selectDynamic(name))
+  }
+
+  override def ![X](using ev: T => Option[X]): ColumnPathOpt[R, X] = {
+    underlying.!
+  }
+
+  override def buildGetter: R => Option[T] = {
+    val underlyingGetter = underlying.buildGetter
+    in => Some(underlyingGetter(in))
+  }
+
+  override def structure: SqlFielded[Option[T]] | SqlColumn[Option[T]] = {
+    underlying.structure match {
+      case f: SqlFielded[T] =>
+        ???
+      case c: SqlColumn[T]  =>
+        ???
+    }
+  }
+
+  override def withAlias(alias: String): ColumnPathOpt[R, T] = ???
+
+  override def buildIdentifier: Seq[SqlIdentifier] = ???
+}
+
+private[usql] case class ColumnPathStartingOpt[R](start: ColumnPathStart[R]) extends ColumnPath[Option[R], Option[R]] {
   override def selectDynamic(name: String): ColumnPath[Option[R], _] = {
-    throw new IllegalArgumentException(s"Can't select field in option, use !")
+    throw new IllegalArgumentException(s"Can only select!")
   }
 
-  override def ![X](using ev: Option[R] => Option[X]): ColumnPath[Option[R], X] = {
+  override def ![X](using ev: Option[R] => Option[X]): ColumnPathOpt[Option[R], X] = {
     ???
   }
 
-  override def buildGetter: Option[R] => Option[R] = {
-    identity
-  }
+  override def buildGetter: Option[R] => Option[R] = ???
 
-  override def structure: SqlFielded[Option[R]] | SqlColumn[Option[R]] = {
-    ???
-  }
+  override def structure: SqlFielded[Option[R]] | SqlColumn[Option[R]] = ???
 
-  override def buildIdentifier: Seq[SqlIdentifier] = {
-    fielded.columns.map(_.id)
-  }
+  override def buildIdentifier: Seq[SqlIdentifier] = ???
 }
 
 private[usql] abstract class ColumnPathAtFielded[R, T](
@@ -85,7 +108,7 @@ private[usql] abstract class ColumnPathAtFielded[R, T](
     in => pm(cm(in))
   }
 
-  override def ![X](using ev: T => Option[X]): ColumnPath[R, X] = ???
+  override def ![X](using ev: T => Option[X]): ColumnPathOpt[R, X] = ???
 
   override def structure: SqlFielded[T] = {
     SqlFielded.MappedSqlFielded(fielded, childrenMapping)
@@ -136,7 +159,7 @@ private[usql] case class ColumnPathSelectColumn[R, P, T](
     throw new IllegalStateException(s"Can walk further column")
   }
 
-  override def ![X](using ev: T => Option[X]): ColumnPath[R, X] = {
+  override def ![X](using ev: T => Option[X]): ColumnPathOpt[R, X] = {
     throw new NotImplementedError(s"Unpacking option is not implemented here!")
   }
 

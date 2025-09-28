@@ -26,7 +26,7 @@ trait ColumnPath[R, T] extends Selectable with SqlIdentifying with Rep[T] {
   def selectDynamic(name: String): ColumnPath[R, ?]
 
   /** Unpack an option. */
-  def ![X](using ev: T => Option[X]): ColumnPath[R, X]
+  def ![X](using ev: T => Option[X]): ColumnPathOpt[R, X]
 
   /** Build a getter for this field from the base type. */
   def buildGetter: R => T
@@ -39,11 +39,35 @@ trait ColumnPath[R, T] extends Selectable with SqlIdentifying with Rep[T] {
   override def toInterpolationParameter: SqlInterpolationParameter = buildIdentifier
 }
 
+/** Like [[ColumnPath]] but for an optional value T. */
+trait ColumnPathOpt[R, T] extends Selectable with SqlIdentifying with Rep[Option[T]] {
+  final type Child[X] = ColumnPathOpt[R, X]
+
+  /** Names the Fields of this ColumnPath. */
+  type Fields = NamedTuple.Map[NamedTuple.From[T], Child]
+
+  /** Select a dynamic field. */
+  def selectDynamic(name: String): ColumnPathOpt[R, ?]
+
+  /** Unpack an option. */
+  def ![X](using ev: T => Option[X]): ColumnPathOpt[R, X]
+
+  /** Build a getter for this field from the base type. */
+  def buildGetter: R => Option[T]
+
+  /** The structure of T */
+  def structure: SqlFielded[Option[T]] | SqlColumn[Option[T]]
+
+  def withAlias(alias: String): ColumnPathOpt[R, T]
+
+  override def toInterpolationParameter: SqlInterpolationParameter = buildIdentifier
+}
+
 object ColumnPath {
 
   def make[T](using f: SqlFielded[T]): ColumnPath[T, T] = ColumnPathStart(f)
 
-  def makeOpt[T](using f: SqlFielded[T]): ColumnPath[Option[T], Option[T]] = ColumnPathOpt(f)
+  def makeOpt[T](using f: SqlFielded[T]): ColumnPath[Option[T], Option[T]] = ColumnPathStartingOpt(ColumnPathStart(f))
 
   implicit def fromTuple[T](in: T)(using b: BuildFromTuple[T]): ColumnPath[b.Root, b.CombinedType] =
     b.build(in)

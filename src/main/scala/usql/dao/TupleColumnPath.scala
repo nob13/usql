@@ -14,7 +14,7 @@ object TupleColumnPath {
       throw new IllegalArgumentException("No fields in empty path")
     }
 
-    override def ![X](using ev: (EmptyTuple) => Option[X]): ColumnPath[R, X] = {
+    override def ![X](using ev: (EmptyTuple) => Option[X]): ColumnPathOpt[R, X] = {
       throw new IllegalArgumentException("No fields in empty path")
     }
 
@@ -46,7 +46,7 @@ object TupleColumnPath {
       }
     }
 
-    override def ![X](using ev: H *: T => Option[X]): ColumnPath[R, X] = {
+    override def ![X](using ev: H *: T => Option[X]): ColumnPathOpt[R, X] = {
       throw new IllegalStateException("Should not come here")
     }
 
