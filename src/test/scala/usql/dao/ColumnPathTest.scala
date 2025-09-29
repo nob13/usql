@@ -88,9 +88,15 @@ class ColumnPathTest extends TestBase {
       SqlColumn("x", DataType.get[Option[Int]])
     )
 
-    // val getter = x.buildGetter
-    // getter(None) shouldBe None
-    // getter(Some(sample)) shouldBe sample.x
+    val getter = x.buildGetter
+    getter(None) shouldBe None
+    getter(Some(sample)) shouldBe Some(sample.x)
+
+    val sub2 = rootPath.!.sub.sub2
+    sub2.structure.columns shouldBe Seq(
+      SqlColumn(SqlIdentifier.fromString("sub2_foo"), DataType.get[Option[Boolean]]),
+      SqlColumn(SqlIdentifier.fromString("sub2_bar"), DataType.get[Option[Boolean]])
+    )
   }
 
   it should "provide a structure for each" in {
