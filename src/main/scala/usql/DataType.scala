@@ -5,6 +5,9 @@ import java.sql.{Connection, JDBCType, PreparedStatement, ResultSet}
 /** Type class describing a type to use. */
 trait DataType[T] {
 
+  /** Name of the data type. */
+  def name: String
+
   /** Serialize a value (e.g. Debugging) */
   def serialize(value: T): String = value.toString
 
@@ -41,11 +44,15 @@ trait DataType[T] {
     fillBySqlIdx(idx + 1, ps, value)
   }
 
+  override def toString: String = name
+
   /** Adapt to another type. */
-  def adapt[U](mapFn: T => U, contraMapFn: U => T): DataType[U] = {
+  def adapt[U](newName: String, mapFn: T => U, contraMapFn: U => T): DataType[U] = {
     val me = this
     new DataType[U] {
       override def jdbcType: JDBCType = me.jdbcType
+
+      override def name: String = newName
 
       override def extractBySqlIdx(cIdx: Int, rs: ResultSet): U = mapFn(me.extractBySqlIdx(cIdx, rs))
 
@@ -60,10 +67,16 @@ trait DataType[T] {
   }
 
   /** Adapt to another type, also providing the prepared statement */
-  def adaptWithPs[U <: AnyRef](mapFn: T => U, contraMapFn: (U, PreparedStatement) => T): DataType[U] = {
+  def adaptWithPs[U <: AnyRef](
+      newName: String,
+      mapFn: T => U,
+      contraMapFn: (U, PreparedStatement) => T
+  ): DataType[U] = {
     val me = this
     new DataType[U] {
       override def jdbcType: JDBCType = me.jdbcType
+
+      override def name: String = newName
 
       override def extractBySqlIdx(cIdx: Int, rs: ResultSet): U = {
         val inner = me.extractBySqlIdx(cIdx, rs)
@@ -78,14 +91,25 @@ trait DataType[T] {
         me.fillBySqlIdx(pIdx, ps, contraMapFn(value, ps))
     }
   }
+
+  /** Returns the optional variant of this data type. */
+  def optionalize: DataType[?] = {
+    this match {
+      case o: DataType.OptionalDataType[?] => o
+      case d: DataType[?]                  => DataType.OptionalDataType(this)
+    }
+  }
 }
 
 object DataType {
   def simple[T](
+      newName: String,
       jdbc: JDBCType,
       rsExtractor: (ResultSet, Int) => T,
       filler: (PreparedStatement, Int, T) => Unit
   ): DataType[T] = new DataType[T] {
+    override def name: String = newName
+
     override def jdbcType: JDBCType = jdbc
 
     override def extractBySqlIdx(cIdx: Int, rs: ResultSet): T = rsExtractor(rs, cIdx)
@@ -96,6 +120,8 @@ object DataType {
   def get[T](using dt: DataType[T]): DataType[T] = dt
 
   case class OptionalDataType[T](underlying: DataType[T]) extends DataType[Option[T]] {
+    override def name: String = s"Option[${underlying.name}]"
+
     override def extractBySqlIdx(cIdx: Int, rs: ResultSet): Option[T] = {
       underlying.extractOptionalBySqlIdx(cIdx, rs)
     }

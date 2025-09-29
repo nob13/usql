@@ -8,7 +8,8 @@ class ColumnPathTest extends TestBase {
 
   case class SubSubElement(
       foo: Boolean,
-      bar: Int
+      bar: Int,
+      biz: Option[String]
   ) derives SqlFielded
 
   case class SubElement(
@@ -35,7 +36,8 @@ class ColumnPathTest extends TestBase {
       b = "Hello",
       sub2 = SubSubElement(
         true,
-        123
+        123,
+        Some("Hallo")
       )
     )
   )
@@ -45,7 +47,8 @@ class ColumnPathTest extends TestBase {
     path.sub.a.buildIdentifier shouldBe Seq(SqlIdentifier.fromString("a"))
     path.sub.sub2.buildIdentifier shouldBe Seq(
       SqlIdentifier.fromString("sub2_foo"),
-      SqlIdentifier.fromString("sub2_bar")
+      SqlIdentifier.fromString("sub2_bar"),
+      SqlIdentifier.fromString("sub2_biz")
     )
     path.sub.sub2.foo.buildIdentifier shouldBe Seq(SqlIdentifier.fromString("sub2_foo"))
   }
@@ -95,8 +98,21 @@ class ColumnPathTest extends TestBase {
     val sub2 = rootPath.!.sub.sub2
     sub2.structure.columns shouldBe Seq(
       SqlColumn(SqlIdentifier.fromString("sub2_foo"), DataType.get[Option[Boolean]]),
-      SqlColumn(SqlIdentifier.fromString("sub2_bar"), DataType.get[Option[Boolean]])
+      SqlColumn(SqlIdentifier.fromString("sub2_bar"), DataType.get[Option[Int]]),
+      SqlColumn(SqlIdentifier.fromString("sub2_biz"), DataType.get[Option[String]])
     )
+
+    sub2.buildGetter(None) shouldBe None
+    sub2.buildGetter(Some(sample)) shouldBe Some(sample.sub.sub2)
+
+    val biz = sub2.biz
+    biz.structure.columns shouldBe Seq(
+      SqlColumn(SqlIdentifier.fromString("sub2_biz"), DataType.get[Option[String]]),
+    )
+
+    biz.buildGetter(None) shouldBe None
+    biz.buildGetter(Some(sample)) shouldBe Some("Hallo") // TODO: We must optionalize values in a return statement
+    biz.buildGetter(Some(sample.copy(sub = sample.sub.copy(sub2 = sample.sub.sub2.copy(biz = None))))) shouldBe None
   }
 
   it should "provide a structure for each" in {
@@ -106,7 +122,8 @@ class ColumnPathTest extends TestBase {
     val substructure: SqlFielded[SubSubElement] = path.sub.sub2.structure.asInstanceOf[SqlFielded[SubSubElement]]
     substructure.columns.map(_.id.name) shouldBe Seq(
       "sub2_foo",
-      "sub2_bar"
+      "sub2_bar",
+      "sub2_biz"
     )
     path.structure shouldBe Sample.derived$SqlFielded
     val subStructure                            = path.sub.structure.asInstanceOf[SqlFielded[SubElement]]

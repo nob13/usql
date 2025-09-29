@@ -88,6 +88,41 @@ object SqlFielded {
 
     override protected[dao] def build(fieldValues: Seq[Any]): T = underlying.build(fieldValues)
   }
+
+  case class OptionalSqlFielded[T](underlying: SqlFielded[T]) extends SqlFielded[Option[T]] {
+    override def fields: Seq[Field[_]] = underlying.fields.map {
+      case g: Field.Group[?]  =>
+        g.copy(
+          fielded = OptionalSqlFielded(g.fielded)
+        )
+      case c: Field.Column[?] =>
+        c.copy(
+          column = c.column.copy(
+            dataType = c.column.dataType.optionalize
+          )
+        )
+    }
+
+    override protected[dao] def split(value: Option[T]): Seq[Any] = {
+      value match {
+        case None        => Seq.fill(fields.size)(None)
+        case Some(value) =>
+          // TODO: We need to provide some to the optional fields.
+          underlying.split(value).map(Some(_))
+      }
+    }
+
+    override protected[dao] def build(fieldValues: Seq[Any]): Option[T] = {
+      if fieldValues == nullValue then {
+        None
+      } else {
+        // TODO: We need to decode null values
+        Some(underlying.build(fieldValues))
+      }
+    }
+
+    private def nullValue: Seq[Any] = Seq.fill(fields.size)(None)
+  }
 }
 
 /** A Field of a case class. */

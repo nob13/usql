@@ -47,11 +47,10 @@ private[usql] case class ColumnPathStartingOpt[R, T](path: ColumnPath[R, T]) ext
   override def structure: SqlFielded[Option[T]] | SqlColumn[Option[T]] = {
     path.structure match {
       case f: SqlFielded[T] =>
-        // TODO!
-        ???
+        SqlFielded.OptionalSqlFielded(f)
       case c: SqlColumn[T]  =>
         c.copy(
-          dataType = DataType.OptionalDataType(c.dataType)
+          dataType = c.dataType.optionalize.asInstanceOf[DataType[Option[T]]]
         )
     }
   }

@@ -6,6 +6,8 @@ import java.util.UUID
 
 trait PostgresProfile extends BasicProfile {
   implicit val uuidType: DataType[UUID] = new DataType[UUID] {
+    override def name: String = "UUID"
+
     override def jdbcType: JDBCType = JDBCType.OTHER
 
     override def extractBySqlIdx(cIdx: Int, rs: ResultSet): UUID = rs.getObject(cIdx, classOf[UUID])
