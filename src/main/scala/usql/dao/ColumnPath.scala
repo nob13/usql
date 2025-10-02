@@ -6,6 +6,12 @@ import usql.{DataType, Sql, SqlIdentifier, SqlIdentifying, SqlInterpolationParam
 import scala.annotation.implicitNotFound
 import scala.language.implicitConversions
 
+/** Returns underlying type of Option if T is an Option */
+type UnOption[T] = T match {
+  case Option[x] => x
+  case _         => T
+}
+
 /**
  * Helper for going through the field path of SqlFielded.
  *
@@ -27,7 +33,7 @@ trait ColumnPath[R, T] extends Selectable with SqlIdentifying with Rep[T] {
 
   /** Unpack an option. */
   def ![X](using ev: T => Option[X]): ColumnPathOpt[R, X]
-  
+
   /** Build a getter for this field from the base type. */
   def buildGetter: R => T
 
@@ -41,7 +47,7 @@ trait ColumnPath[R, T] extends Selectable with SqlIdentifying with Rep[T] {
 
 /** Like [[ColumnPath]] but for an optional value T. */
 trait ColumnPathOpt[R, T] extends Selectable with SqlIdentifying with Rep[Option[T]] {
-  final type Child[X] = ColumnPathOpt[R, X]
+  final type Child[X] = ColumnPathOpt[R, UnOption[X]]
 
   /** Names the Fields of this ColumnPath. */
   type Fields = NamedTuple.Map[NamedTuple.From[T], Child]

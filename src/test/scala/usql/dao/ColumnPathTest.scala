@@ -95,7 +95,7 @@ class ColumnPathTest extends TestBase {
     getter(None) shouldBe None
     getter(Some(sample)) shouldBe Some(sample.x)
 
-    val sub2 = rootPath.!.sub.sub2
+    val sub2: ColumnPathOpt[Option[Sample], SubSubElement] = rootPath.!.sub.sub2
     sub2.structure.columns shouldBe Seq(
       SqlColumn(SqlIdentifier.fromString("sub2_foo"), DataType.get[Option[Boolean]]),
       SqlColumn(SqlIdentifier.fromString("sub2_bar"), DataType.get[Option[Int]]),
@@ -105,13 +105,14 @@ class ColumnPathTest extends TestBase {
     sub2.buildGetter(None) shouldBe None
     sub2.buildGetter(Some(sample)) shouldBe Some(sample.sub.sub2)
 
-    val biz = sub2.biz
+    // Note: UnpackOption helps here, that the type is a String, not Option[String]
+    val biz: ColumnPathOpt[Option[Sample], String] = sub2.biz
     biz.structure.columns shouldBe Seq(
-      SqlColumn(SqlIdentifier.fromString("sub2_biz"), DataType.get[Option[String]]),
+      SqlColumn(SqlIdentifier.fromString("sub2_biz"), DataType.get[Option[String]])
     )
 
     biz.buildGetter(None) shouldBe None
-    biz.buildGetter(Some(sample)) shouldBe Some("Hallo") // TODO: We must optionalize values in a return statement
+    biz.buildGetter(Some(sample)) shouldBe Some("Hallo") // TODO: We must de-optionalize values in a return statement
     biz.buildGetter(Some(sample.copy(sub = sample.sub.copy(sub2 = sample.sub.sub2.copy(biz = None))))) shouldBe None
   }
 
