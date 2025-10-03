@@ -73,18 +73,6 @@ class ColumnPathTest extends TestBase {
   it should "work with optionals" in {
     val rootPath: ColumnPath[Option[Sample], Option[Sample]] = ColumnPath.makeOpt
 
-    // TODO: Das haut nicht hin, x packt das ganze aus, der ColumnPath müsste die ganze Zeit Option als Return wert haben
-
-    /*
-    Idee für die Umsetzung:
-    - Wir haben einen speziellen OptionalColumnPath der immer optionale Werte mitschleppt und returned. Dazu muss
-    - im Idealfall der ColumnPath spezialisiert werden, so dass unterschiedliche Werte rausgegeben werden können!
-    Es muss auch mit dem restlichen Mist zusammenpassen
-
-    Der Ausrufezeichenoperator fällt dann auch komplett weg, da man dann das eigentliche Objekt traversiert, aber immer ein Mapping
-    auf einen optionalen Wert bekommt.
-     */
-
     val x = rootPath.!.x
 
     x.structure.columns shouldBe Seq(
@@ -113,9 +101,7 @@ class ColumnPathTest extends TestBase {
 
     biz.buildGetter(None) shouldBe None
 
-    // Wir haben bereits einen Check, ob das Ergebnis Optional ist. Nur die richtige Stelle muss noch herausgefunden werden
-
-    biz.buildGetter(Some(sample)) shouldBe Some("Hallo") // TODO: We must de-optionalize values in a return statement
+    biz.buildGetter(Some(sample)) shouldBe Some("Hallo")
     biz.buildGetter(Some(sample.copy(sub = sample.sub.copy(sub2 = sample.sub.sub2.copy(biz = None))))) shouldBe None
   }
 

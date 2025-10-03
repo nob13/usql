@@ -62,4 +62,6 @@ object SqlIdentifier {
       }
     }
   }
+
+  def fromStrings(s: String*): Seq[SqlIdentifier] = s.map(fromString)
 }

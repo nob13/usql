@@ -1,7 +1,6 @@
 package usql.dao
 
-import usql.SqlInterpolationParameter.SqlParameter
-import usql.{DataType, Sql, SqlIdentifier, SqlIdentifying, SqlInterpolationParameter, sql}
+import usql.{SqlIdentifying, SqlInterpolationParameter}
 
 import scala.annotation.implicitNotFound
 import scala.language.implicitConversions
@@ -38,7 +37,11 @@ trait ColumnPath[R, T] extends Selectable with SqlIdentifying with Rep[T] {
   def selectDynamic(name: String): ColumnPath[R, ?]
 
   /** Unpack an option. */
-  def ![X](using ev: T => Option[X]): ColumnPathOpt[R, X]
+  final def ! : ColumnPathOpt[R, UnOption[T]] = {
+    ColumnPathOptImpl(
+      ColumnPathOptionalize.make(this).asInstanceOf[ColumnPath[R, Option[?]]]
+    ).asInstanceOf[ColumnPathOpt[R, UnOption[T]]]
+  }
 
   /** Build a getter for this field from the base type. */
   def buildGetter: R => T
@@ -49,6 +52,13 @@ trait ColumnPath[R, T] extends Selectable with SqlIdentifying with Rep[T] {
   def withAlias(alias: String): ColumnPath[R, T] = ColumnPathAlias(this, alias)
 
   override def toInterpolationParameter: SqlInterpolationParameter = buildIdentifier
+
+  override def toString: String = {
+    buildIdentifier match {
+      case Seq(one) => one.toString
+      case multiple => multiple.mkString("[", ",", "[")
+    }
+  }
 }
 
 /** Like [[ColumnPath]] but for an optional value T. */
@@ -60,9 +70,6 @@ trait ColumnPathOpt[R, T] extends Selectable with SqlIdentifying with Rep[Option
 
   /** Select a dynamic field. */
   def selectDynamic(name: String): ColumnPathOpt[R, ?]
-
-  /** Unpack an option. */
-  def ![X](using ev: T => Option[X]): ColumnPathOpt[R, X]
 
   /** Build a getter for this field from the base type. */
   def buildGetter: R => Option[T]

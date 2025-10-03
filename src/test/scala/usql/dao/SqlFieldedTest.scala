@@ -30,15 +30,19 @@ class SqlFieldedTest extends TestBase {
     val adapter = summon[SqlFielded[Person]]
     adapter.fields.map(_.fieldName) shouldBe Seq("id", "name", "age", "coordinate")
     adapter.columns
-      .map(_.id) shouldBe Seq("id", "long_name", "age", "coordinate_x", "coordinate_y").map(SqlIdentifier.fromString)
+      .map(_.id) shouldBe SqlIdentifier.fromStrings("id", "long_name", "age", "coordinate_x", "coordinate_y")
 
-    intercept[IllegalStateException] {
-      adapter.cols.buildIdentifier
-    }
-    adapter.cols.name.buildIdentifier shouldBe SqlIdentifier.fromString("long_name")
-    Person.cols.name.buildIdentifier shouldBe SqlIdentifier.fromString("long_name")
+    adapter.cols.buildIdentifier shouldBe SqlIdentifier.fromStrings(
+      "id",
+      "long_name",
+      "age",
+      "coordinate_x",
+      "coordinate_y"
+    )
+    adapter.cols.name.buildIdentifier shouldBe SqlIdentifier.fromStrings("long_name")
+    Person.cols.name.buildIdentifier shouldBe SqlIdentifier.fromStrings("long_name")
 
-    adapter.cols.coordinate.x.buildIdentifier shouldBe SqlIdentifier.fromString("coordinate_x")
-    Person.cols.coordinate.x.buildIdentifier shouldBe SqlIdentifier.fromString("coordinate_x")
+    adapter.cols.coordinate.x.buildIdentifier shouldBe SqlIdentifier.fromStrings("coordinate_x")
+    Person.cols.coordinate.x.buildIdentifier shouldBe SqlIdentifier.fromStrings("coordinate_x")
   }
 }

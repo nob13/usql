@@ -14,10 +14,6 @@ object TupleColumnPath {
       throw new IllegalArgumentException("No fields in empty path")
     }
 
-    override def ![X](using ev: (EmptyTuple) => Option[X]): ColumnPathOpt[R, X] = {
-      throw new IllegalArgumentException("No fields in empty path")
-    }
-
     override def buildGetter: R => EmptyTuple = _ => EmptyTuple
 
     override def toInterpolationParameter: SqlInterpolationParameter = SqlInterpolationParameter.Empty
@@ -44,10 +40,6 @@ object TupleColumnPath {
       } else {
         tail.selectDynamic(s"_${index}")
       }
-    }
-
-    override def ![X](using ev: H *: T => Option[X]): ColumnPathOpt[R, X] = {
-      throw new IllegalStateException("Should not come here")
     }
 
     override def buildGetter: R => H *: T = {

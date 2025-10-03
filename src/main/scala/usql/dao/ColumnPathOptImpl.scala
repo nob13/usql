@@ -10,10 +10,6 @@ private[usql] case class ColumnPathOptImpl[R, T](underlying: ColumnPath[R, Optio
     )
   }
 
-  override def ![X](using ev: T => Option[X]): ColumnPathOpt[R, X] = {
-    this.asInstanceOf[ColumnPathOpt[R, X]]
-  }
-
   override def buildGetter: R => Option[T] = {
     underlying.buildGetter
   }
@@ -22,7 +18,13 @@ private[usql] case class ColumnPathOptImpl[R, T](underlying: ColumnPath[R, Optio
     underlying.structure
   }
 
-  override def withAlias(alias: String): ColumnPathOpt[R, T] = ???
+  override def withAlias(alias: String): ColumnPathOpt[R, T] = copy(
+    underlying.withAlias(alias)
+  )
 
-  override def buildIdentifier: Seq[SqlIdentifier] = ???
+  override def buildIdentifier: Seq[SqlIdentifier] = underlying.buildIdentifier
+
+  override def toString: String = {
+    underlying.toString
+  }
 }

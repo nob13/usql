@@ -94,7 +94,7 @@ class SimpleJoinTest extends TestBaseWithH2 {
   }
 
   it should "provide access to aliased column names" in new Env {
-    person.col.name.buildIdentifier.toString shouldBe "p.name"
+    person.col.name.buildIdentifier.map(_.toString) shouldBe Seq("p.name")
     val selected =
       sql"""
           SELECT ${person.col.name} FROM ${person}
