@@ -12,6 +12,12 @@ type UnOption[T] = T match {
   case _         => T
 }
 
+/** Returns the optional value, if not yet optional. */
+type Optionalize[T] = T match {
+  case Option[x] => T
+  case _         => Option[T]
+}
+
 /**
  * Helper for going through the field path of SqlFielded.
  *
@@ -73,7 +79,9 @@ object ColumnPath {
 
   def make[T](using f: SqlFielded[T]): ColumnPath[T, T] = ColumnPathStart(f)
 
-  def makeOpt[T](using f: SqlFielded[T]): ColumnPath[Option[T], Option[T]] = ColumnPathStartingOpt(ColumnPathStart(f))
+  def makeOpt[T](using f: SqlFielded[T]): ColumnPath[Option[T], Optionalize[T]] = ColumnPathStartingOpt(
+    ColumnPathStart(f)
+  )
 
   implicit def fromTuple[T](in: T)(using b: BuildFromTuple[T]): ColumnPath[b.Root, b.CombinedType] =
     b.build(in)

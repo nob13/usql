@@ -30,27 +30,35 @@ private[usql] case class ColumnPathAlias[R, T](underlying: ColumnPath[R, T], ali
   }
 }
 
-private[usql] case class ColumnPathStartingOpt[R, T](path: ColumnPath[R, T]) extends ColumnPath[Option[R], Option[T]] {
+private[usql] case class ColumnPathStartingOpt[R, T](path: ColumnPath[R, T])
+    extends ColumnPath[Option[R], Optionalize[T]] {
   override def selectDynamic(name: String): ColumnPath[Option[R], _] = {
     ColumnPathStartingOpt(path.selectDynamic(name))
   }
 
-  override def ![X](using ev: Option[T] => Option[X]): ColumnPathOpt[Option[R], X] = {
+  override def ![X](using ev: Optionalize[T] => Option[X]): ColumnPathOpt[Option[R], X] = {
     ColumnPathOptImpl(this.asInstanceOf[ColumnPath[Option[R], Option[X]]])
   }
 
-  override def buildGetter: Option[R] => Option[T] = {
+  override def buildGetter: Option[R] => Optionalize[T] = {
     val underlyingGetter = path.buildGetter
-    it => it.map(underlyingGetter)
+    if path.structure.isOptional then { it =>
+      it.flatMap { r =>
+        underlyingGetter(r).asInstanceOf[Option[T]]
+      }.asInstanceOf[Optionalize[T]]
+    } else { it =>
+      it.map(underlyingGetter).asInstanceOf[Optionalize[T]]
+    }
+
   }
 
-  override def structure: SqlFielded[Option[T]] | SqlColumn[Option[T]] = {
+  override def structure: SqlFielded[Optionalize[T]] | SqlColumn[Optionalize[T]] = {
     path.structure match {
       case f: SqlFielded[T] =>
-        SqlFielded.OptionalSqlFielded(f)
+        SqlFielded.OptionalSqlFielded(f).asInstanceOf[SqlFielded[Optionalize[T]]]
       case c: SqlColumn[T]  =>
         c.copy(
-          dataType = c.dataType.optionalize.asInstanceOf[DataType[Option[T]]]
+          dataType = c.dataType.optionalize.asInstanceOf[DataType[Optionalize[T]]]
         )
     }
   }
