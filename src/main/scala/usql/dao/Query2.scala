@@ -57,10 +57,6 @@ object Query2 {
     override def fielded: SqlFielded[T] = table
 
     override def project[P](p: ColumnPath[T, P]): Query2[P] = {
-      val fielded = p.structure match {
-        case f: SqlFielded[P] => f
-        case c: SqlColumn[P]  => SqlFielded.PseudoFielded(c)
-      }
       TableProject(p, table, ensureFielded(p.structure))
     }
   }
@@ -102,7 +98,8 @@ object Query2 {
     override def toSql: Sql =
       sql"SELECT * FROM (${left.toSql}) LEFT JOIN (${right.toSql}) ON (${exp.toInterpolationParameter})"
 
-    override def fielded: SqlFielded[(L, Option[R])] = SqlFielded.ConcatFielded(left.fielded, SqlFielded.OptionalSqlFielded(right.fielded))
+    override def fielded: SqlFielded[(L, Option[R])] =
+      SqlFielded.ConcatFielded(left.fielded, SqlFielded.OptionalSqlFielded(right.fielded))
   }
 
   private def ensureFielded[T](in: SqlColumn[T] | SqlFielded[T]): SqlFielded[T] = {
