@@ -84,11 +84,22 @@ class ColumnPathTest extends TestBase {
     getter(Some(sample)) shouldBe Some(sample.x)
 
     val sub2: ColumnPath[Option[Sample], Option[SubSubElement]] = rootPath.sub.sub2
-    sub2.structure.columns shouldBe Seq(
+    val sub2Structure                                           = sub2.structure.asInstanceOf[SqlFielded[Option[SubSubElement]]]
+
+    sub2Structure.columns shouldBe Seq(
       SqlColumn(SqlIdentifier.fromString("sub2_foo"), DataType.get[Option[Boolean]]),
       SqlColumn(SqlIdentifier.fromString("sub2_bar"), DataType.get[Option[Int]]),
       SqlColumn(SqlIdentifier.fromString("sub2_biz"), DataType.get[Option[String]])
     )
+
+    sub2Structure.split(None) shouldBe Seq(None, None, None)
+    sub2Structure.build(Seq(None, None, None)) shouldBe None
+    sub2Structure.build(Seq(Some(true), Some(100), Some("Bim"))) shouldBe Some(SubSubElement(true, 100, Some("Bim")))
+    sub2Structure.build(Seq(Some(true), Some(100), None)) shouldBe Some(SubSubElement(true, 100, None))
+    intercept[IllegalArgumentException] {
+      // The first value is not optional inside
+      sub2Structure.build(Seq(None, Some(100), None))
+    }
 
     sub2.buildGetter(None) shouldBe None
     sub2.buildGetter(Some(sample)) shouldBe Some(sample.sub.sub2)

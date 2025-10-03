@@ -1,6 +1,6 @@
 package usql.dao
 
-import usql.{RowEncoder, RowDecoder, SqlIdentifier}
+import usql.{Optionalize, RowDecoder, RowEncoder, SqlIdentifier}
 
 import java.sql.{PreparedStatement, ResultSet}
 import scala.deriving.Mirror
@@ -55,6 +55,10 @@ trait SqlFielded[T] extends SqlColumnar[T] {
   override def toString: String = {
     fields.mkString("[", ", ", "]")
   }
+
+  override def optionalize: SqlFielded[Optionalize[T]] = SqlFielded
+    .OptionalSqlFielded(this)
+    .asInstanceOf[SqlFielded[Optionalize[T]]]
 }
 
 object SqlFielded {
@@ -98,6 +102,9 @@ object SqlFielded {
   }
 
   case class OptionalSqlFielded[T](underlying: SqlFielded[T]) extends SqlFielded[Option[T]] {
+
+    val needsOptionalization = underlying.fields.map(f => !f.isOptional)
+
     override def fields: Seq[Field[_]] = underlying.fields.map {
       case g: Field.Group[?]  =>
         g.copy(
@@ -115,8 +122,7 @@ object SqlFielded {
       value match {
         case None        => Seq.fill(fields.size)(None)
         case Some(value) =>
-          // TODO: We need to provide some to the optional fields.
-          underlying.split(value).map(Some(_))
+          underlying.split(value).map(Optionalize.apply)
       }
     }
 
@@ -124,14 +130,22 @@ object SqlFielded {
       if fieldValues == nullValue then {
         None
       } else {
-        // TODO: We need to decode null values
-        Some(underlying.build(fieldValues))
+        val unpacked = fieldValues.zip(needsOptionalization).zipWithIndex.map {
+          case ((value, true), idx) =>
+            value.asInstanceOf[Option[?]].getOrElse {
+              throw IllegalArgumentException(s"Unexpected None value in field value ${fields(idx).fieldName}")
+            }
+          case ((value, _), _)      => value
+        }
+        Some(underlying.build(unpacked))
       }
     }
 
     private def nullValue: Seq[Any] = Seq.fill(fields.size)(None)
 
     override def isOptional: Boolean = true
+
+    override def optionalize: SqlFielded[Optionalize[Option[T]]] = this
   }
 }
 
@@ -149,6 +163,9 @@ sealed trait Field[T] {
 
   /** Filler for this field. */
   def filler: RowEncoder[T]
+
+  /** The value is optional */
+  def isOptional: Boolean
 }
 
 object Field {
@@ -162,6 +179,8 @@ object Field {
     override def filler: RowEncoder[T] = RowEncoder.forDataType[T](using column.dataType)
 
     override def toString: String = s"${fieldName}: ($column)"
+
+    override def isOptional: Boolean = column.isOptional
   }
 
   /** A Field which maps to a nested case class */
@@ -185,5 +204,7 @@ object Field {
     override def filler: RowEncoder[T] = fielded.rowEncoder
 
     override def toString: String = s"${fieldName}: $fielded"
+
+    override def isOptional: Boolean = fielded.isOptional
   }
 }

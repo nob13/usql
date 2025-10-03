@@ -1,6 +1,6 @@
 package usql.dao
 
-import usql.{DataType, RowDecoder, RowEncoder, SqlIdentifier, SqlRawPart}
+import usql.{DataType, Optionalize, RowDecoder, RowEncoder, SqlIdentifier, SqlRawPart}
 
 /** A Single Column */
 case class SqlColumn[T](
@@ -18,4 +18,8 @@ case class SqlColumn[T](
   }
 
   override def isOptional: Boolean = dataType.isOptional
+
+  override def optionalize: SqlColumn[Optionalize[T]] = copy(
+    dataType = dataType.optionalize
+  )
 }

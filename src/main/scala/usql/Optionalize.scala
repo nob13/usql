@@ -13,5 +13,10 @@ type Optionalize[T] = T match {
 }
 
 object Optionalize {
-  
+  def apply[T](value: T): Optionalize[T] = {
+    value match {
+      case o: Option[_] => o.asInstanceOf[Optionalize[T]]
+      case otherwise    => Some(otherwise).asInstanceOf[Optionalize[T]]
+    }
+  }
 }
