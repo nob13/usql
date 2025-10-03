@@ -1,21 +1,9 @@
 package usql.dao
 
-import usql.{SqlIdentifying, SqlInterpolationParameter}
+import usql.{Optionalize, SqlIdentifying, SqlInterpolationParameter, UnOption}
 
 import scala.annotation.implicitNotFound
 import scala.language.implicitConversions
-
-/** Returns underlying type of Option if T is an Option */
-type UnOption[T] = T match {
-  case Option[x] => x
-  case _         => T
-}
-
-/** Returns the optional value, if not yet optional. */
-type Optionalize[T] = T match {
-  case Option[x] => T
-  case _         => Option[T]
-}
 
 /**
  * Helper for going through the field path of SqlFielded.

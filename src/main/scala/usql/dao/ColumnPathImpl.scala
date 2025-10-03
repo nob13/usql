@@ -1,6 +1,6 @@
 package usql.dao
 
-import usql.{DataType, SqlIdentifier}
+import usql.{DataType, Optionalize, SqlIdentifier}
 
 private[usql] case class ColumnPathAlias[R, T](underlying: ColumnPath[R, T], alias: String) extends ColumnPath[R, T] {
   override def selectDynamic(name: String): ColumnPath[R, _] = {
@@ -192,7 +192,7 @@ private[usql] object ColumnPathOptionalize {
         c.asInstanceOf[SqlColumn[Optionalize[T]]]
       case c: SqlColumn[T]                          =>
         c.copy(
-          dataType = c.dataType.optionalize.asInstanceOf[DataType[Optionalize[T]]]
+          dataType = c.dataType.optionalize
         )
     }
   }
