@@ -16,20 +16,22 @@ import scala.language.implicitConversions
  *   end path
  */
 trait ColumnPath[R, T] extends Selectable with SqlIdentifying with Rep[T] {
-  final type Child[X] = ColumnPath[R, X]
+
+  /**
+   * If we are coming from an optional value, we go into an optional value.
+   *
+   * If not, we take the child value.
+   */
+  final type Child[X] = R match {
+    case Option[r] => ColumnPath[R, Optionalize[X]]
+    case _         => ColumnPath[R, X]
+  }
 
   /** Names the Fields of this ColumnPath. */
-  type Fields = NamedTuple.Map[NamedTuple.From[T], Child]
+  type Fields = NamedTuple.Map[NamedTuple.From[UnOption[T]], Child]
 
   /** Select a dynamic field. */
   def selectDynamic(name: String): ColumnPath[R, ?]
-
-  /** Unpack an option. */
-  final def ! : ColumnPathOpt[R, UnOption[T]] = {
-    ColumnPathOptImpl(
-      ColumnPathOptionalize.make(this).asInstanceOf[ColumnPath[R, Option[?]]]
-    ).asInstanceOf[ColumnPathOpt[R, UnOption[T]]]
-  }
 
   /** Build a getter for this field from the base type. */
   def buildGetter: R => T
@@ -47,27 +49,6 @@ trait ColumnPath[R, T] extends Selectable with SqlIdentifying with Rep[T] {
       case multiple => multiple.mkString("[", ",", "[")
     }
   }
-}
-
-/** Like [[ColumnPath]] but for an optional value T. */
-trait ColumnPathOpt[R, T] extends Selectable with SqlIdentifying with Rep[Option[T]] {
-  final type Child[X] = ColumnPathOpt[R, UnOption[X]]
-
-  /** Names the Fields of this ColumnPath. */
-  type Fields = NamedTuple.Map[NamedTuple.From[T], Child]
-
-  /** Select a dynamic field. */
-  def selectDynamic(name: String): ColumnPathOpt[R, ?]
-
-  /** Build a getter for this field from the base type. */
-  def buildGetter: R => Option[T]
-
-  /** The structure of T */
-  def structure: SqlFielded[Option[T]] | SqlColumn[Option[T]]
-
-  def withAlias(alias: String): ColumnPathOpt[R, T]
-
-  override def toInterpolationParameter: SqlInterpolationParameter = buildIdentifier
 }
 
 object ColumnPath {

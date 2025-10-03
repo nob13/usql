@@ -148,7 +148,7 @@ class QueryBuilderTest extends TestBaseWithH2 {
     val foo2 = Query2
       .make[Person]
       .leftJoin(Query2.make[PersonPermission])(_.id == _.personId)
-      .leftJoin(Query2.make[Permission])(_._2.!.permissionId == _.id)
+      .leftJoin(Query2.make[Permission])(_._2.permissionId == _.id)
       .filter(_._1._1.age.isNotNull)
       .map(_._1._1.name)
   }

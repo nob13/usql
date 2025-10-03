@@ -73,7 +73,7 @@ class ColumnPathTest extends TestBase {
   it should "work with optionals" in {
     val rootPath: ColumnPath[Option[Sample], Option[Sample]] = ColumnPath.makeOpt
 
-    val x = rootPath.!.x
+    val x = rootPath.x
 
     x.structure.columns shouldBe Seq(
       SqlColumn("x", DataType.get[Option[Int]])
@@ -83,7 +83,7 @@ class ColumnPathTest extends TestBase {
     getter(None) shouldBe None
     getter(Some(sample)) shouldBe Some(sample.x)
 
-    val sub2: ColumnPathOpt[Option[Sample], SubSubElement] = rootPath.!.sub.sub2
+    val sub2: ColumnPath[Option[Sample], Option[SubSubElement]] = rootPath.sub.sub2
     sub2.structure.columns shouldBe Seq(
       SqlColumn(SqlIdentifier.fromString("sub2_foo"), DataType.get[Option[Boolean]]),
       SqlColumn(SqlIdentifier.fromString("sub2_bar"), DataType.get[Option[Int]]),
@@ -94,7 +94,7 @@ class ColumnPathTest extends TestBase {
     sub2.buildGetter(Some(sample)) shouldBe Some(sample.sub.sub2)
 
     // Note: UnpackOption helps here, that the type is a String, not Option[String]
-    val biz: ColumnPathOpt[Option[Sample], String] = sub2.biz
+    val biz: ColumnPath[Option[Sample], Option[String]] = sub2.biz
     biz.structure.columns shouldBe Seq(
       SqlColumn(SqlIdentifier.fromString("sub2_biz"), DataType.get[Option[String]])
     )
