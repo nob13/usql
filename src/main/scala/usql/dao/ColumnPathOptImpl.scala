@@ -4,8 +4,9 @@ import usql.SqlIdentifier
 
 private[usql] case class ColumnPathOptImpl[R, T](underlying: ColumnPath[R, Option[T]]) extends ColumnPathOpt[R, T] {
   override def selectDynamic(name: String): ColumnPathOpt[R, _] = {
+    val child = underlying.selectDynamic(name)
     ColumnPathOptImpl(
-      underlying.selectDynamic(name).asInstanceOf[ColumnPath[R, Option[?]]]
+      child.asInstanceOf[ColumnPath[R, Option[?]]]
     )
   }
 

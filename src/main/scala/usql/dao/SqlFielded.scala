@@ -51,6 +51,10 @@ trait SqlFielded[T] extends SqlColumnar[T] {
 
     override def cardinality: Int = SqlFielded.this.cardinality
   }
+
+  override def toString: String = {
+    fields.mkString("[", ", ", "]")
+  }
 }
 
 object SqlFielded {
@@ -150,6 +154,8 @@ object Field {
     override def decoder: RowDecoder[T] = RowDecoder.forDataType[T](using column.dataType)
 
     override def filler: RowEncoder[T] = RowEncoder.forDataType[T](using column.dataType)
+
+    override def toString: String = s"${fieldName}: ($column)"
   }
 
   /** A Field which maps to a nested case class */
@@ -171,5 +177,7 @@ object Field {
     override def decoder: RowDecoder[T] = fielded.rowDecoder
 
     override def filler: RowEncoder[T] = fielded.rowEncoder
+
+    override def toString: String = s"${fieldName}: $fielded"
   }
 }
