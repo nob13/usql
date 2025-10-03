@@ -2,7 +2,7 @@ package usql.dao
 
 import usql.{SqlIdentifier, SqlRawPart}
 
-/** Experimental helper for building aliases used in Join Statements */
+/** Aliases a table name for use in Join Statements. */
 case class Alias[T](
     aliasName: String,
     tabular: SqlTabular[T]
@@ -14,16 +14,19 @@ case class Alias[T](
   }
 
   /** Refers to all aliased columns */
-  def columns: SqlRawPart = {
-    SqlRawPart(
-      tabular.columns
-        .map { c => apply(c.id).s }
-        .mkString(",")
-    )
+  def columns: Seq[SqlIdentifier] = {
+    tabular.columns.map { c =>
+      c.id.copy(
+        alias = Some(aliasName)
+      )
+    }
   }
 
   /** Access to aliased cols. */
   def col: ColumnPath[T, T] = {
     tabular.cols.withAlias(aliasName)
   }
+
+  /** Aliased fielded. */
+  def fielded: SqlFielded[T] = SqlFielded.MappedSqlFielded(tabular, id => id.copy(alias = Some(aliasName)))
 }

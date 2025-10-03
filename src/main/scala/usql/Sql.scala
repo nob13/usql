@@ -4,6 +4,7 @@ import SqlInterpolationParameter.{InnerSql, SqlParameter}
 
 import java.sql.{Connection, PreparedStatement}
 import scala.annotation.{tailrec, targetName}
+import scala.collection.mutable
 import scala.language.implicitConversions
 import scala.util.Using
 
@@ -56,9 +57,47 @@ extension (sc: StringContext) {
 
 /** SQL with already embedded parameters. */
 case class Sql(parts: Seq[(String, SqlInterpolationParameter)]) extends SqlBase {
-  def sql = parts.iterator.map { case (part, param) =>
-    part + param.replacement
+
+  /** Converts to SQL Text. */
+  def sql: String = parts.view.map { case (part, param) =>
+    part + param.toSql
   }.mkString
+
+  override def toString: String = sql
+
+  /** Simplify long random generated aliases. */
+  def simplifyAliases: Sql = {
+    val collected                            = collectAliases
+    val builder: mutable.Map[String, String] = mutable.Map.empty
+    collected.foreach { alias =>
+      // Try to keep the first character, its often better readable.
+      val first = alias.take(1)
+      if !builder.contains(first) then {
+        builder += (alias -> first)
+      } else {
+        val toUse = (for
+          i        <- (0 until 100).view
+          candidate = first + i
+          if !builder.contains(candidate)
+        yield (candidate)).headOption.getOrElse {
+          throw new IllegalStateException(s"Could not find a candidate replacement for ${alias}")
+        }
+        builder += (alias -> toUse)
+      }
+    }
+    val mapping                              = builder.toMap
+    mapAliases(mapping)
+  }
+
+  /** Collect aliases within this SQL */
+  def collectAliases: Set[String] = parts.flatMap(_._2.collectAliases).toSet
+
+  /** Map aliases to a new name. */
+  def mapAliases(map: Map[String, String]): Sql = copy(
+    parts = parts.map { case (const, param) =>
+      const -> param.mapAliases(map)
+    }
+  )
 
   private def sqlParameters: Seq[SqlParameter[?]] = parts.collect { case (_, p: SqlParameter[?]) =>
     p

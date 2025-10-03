@@ -1,13 +1,20 @@
 package usql
 
-import usql.dao.{Alias, ColumnPath, Crd, CrdBase, SqlColumn}
+import usql.dao.{Alias, CrdBase, SqlColumn}
 
 import scala.language.implicitConversions
 
 /** Parameters available in sql""-Interpolation. */
 sealed trait SqlInterpolationParameter {
-  /// Replacement, e.g. '?'
-  def replacement: String
+
+  /** Converts to SQL or to replacement character. */
+  def toSql: String
+
+  /** Collect all used aliases. */
+  def collectAliases: Set[String] = Set.empty
+
+  /** Renames aliases. */
+  def mapAliases(map: Map[String, String]): SqlInterpolationParameter = this
 }
 
 object SqlInterpolationParameter {
@@ -25,7 +32,7 @@ object SqlInterpolationParameter {
       value.hashCode()
     }
 
-    override def replacement: String = "?"
+    override def toSql: String = "?"
 
     override def toString: String = {
       s"SqlParameter(${value} of type ${dataType.jdbcType.getName})"
@@ -38,29 +45,81 @@ object SqlInterpolationParameter {
 
   /** A single identifier. */
   case class IdentifierParameter(i: SqlIdentifier) extends SqlInterpolationParameter {
-    override def replacement: String = i.serialize
+    override def toSql: String = i.serialize
+
+    override def collectAliases: Set[String] = i.alias.toSet
+
+    override def mapAliases(map: Map[String, String]): SqlInterpolationParameter = copy(
+      i.copy(
+        alias = i.alias.map { alias =>
+          map.getOrElse(alias, alias)
+        }
+      )
+    )
   }
 
   /** Multiple identifiers. */
   case class IdentifiersParameter(i: Seq[SqlIdentifier]) extends SqlInterpolationParameter {
-    override def replacement: String = {
+    override def toSql: String = {
       i.iterator.map(_.serialize).mkString(",")
+    }
+
+    override def collectAliases: Set[String] = i.flatMap(_.alias).toSet
+
+    override def mapAliases(map: Map[String, String]): SqlInterpolationParameter = {
+      i.map { id =>
+        id.copy(
+          alias = id.alias.map { alias =>
+            map.getOrElse(alias, alias)
+          }
+        )
+      }
     }
   }
 
   /** Some unchecked raw block. */
   case class RawBlockParameter(s: String) extends SqlInterpolationParameter {
-    override def replacement: String = s
+    override def toSql: String = s
   }
 
   case class InnerSql(sql: Sql) extends SqlInterpolationParameter {
     // Not used
-    override def replacement: String = sql.sql
+    override def toSql: String = sql.sql
+
+    override def collectAliases: Set[String] = sql.collectAliases
+
+    override def mapAliases(map: Map[String, String]): SqlInterpolationParameter = sql.mapAliases(map)
+  }
+
+  case class TableRef(tableName: String, quoted: Boolean, alias: Option[String]) extends SqlInterpolationParameter {
+    override def toSql: String = {
+      val builder = StringBuilder()
+      if quoted then {
+        builder += '\"'
+        builder ++= tableName
+        builder += '\''
+      } else {
+        builder ++= tableName
+      }
+      alias.foreach { a =>
+        builder += ' '
+        builder ++= a
+      }
+      builder.toString()
+    }
+
+    override def collectAliases: Set[String] = alias.toSet
+
+    override def mapAliases(map: Map[String, String]): SqlInterpolationParameter = {
+      copy(
+        alias = alias.map { a => map.getOrElse(a, a) }
+      )
+    }
   }
 
   /** Empty leaf, so that we have exactly as much interpolation parameters as string parts. */
   object Empty extends SqlInterpolationParameter {
-    override def replacement: String = ""
+    override def toSql: String = ""
   }
 
   implicit def toSqlParameter[T](value: T)(using dataType: DataType[T]): SqlParameter[T] = {
@@ -74,10 +133,14 @@ object SqlInterpolationParameter {
     i.flatMap(_.buildIdentifier)
   )
   implicit def columnsParameter(c: Seq[SqlColumn[?]]): IdentifiersParameter         = IdentifiersParameter(c.map(_.id))
-  implicit def rawBlockParameter(rawPart: SqlRawPart): RawBlockParameter            = RawBlockParameter(rawPart.s)
+  implicit def rawBlockParameter(rawPart: SqlRawPart): RawBlockParameter            = {
+    RawBlockParameter(rawPart.s)
+  }
   implicit def innerSql(sql: Sql): InnerSql                                         = InnerSql(sql)
-  implicit def alias(alias: Alias[?]): RawBlockParameter                            = RawBlockParameter(
-    s"${alias.tabular.tableName} ${alias.aliasName}"
+  implicit def alias(alias: Alias[?]): TableRef                                     = TableRef(
+    tableName = alias.tabular.tableName.name,
+    quoted = alias.tabular.tableName.quoted,
+    alias = Some(alias.aliasName)
   )
 
   implicit def sqlParameters[T](sqlParameters: SqlParameters[T])(using dataType: DataType[T]): InnerSql = {
@@ -91,7 +154,11 @@ object SqlInterpolationParameter {
     InnerSql(Sql(builder.result()))
   }
 
-  implicit def crd(crd: CrdBase[?]): RawBlockParameter = RawBlockParameter(s"${crd.tabular.tableName}")
+  implicit def crd(crd: CrdBase[?]): TableRef = TableRef(
+    crd.tabular.tableName.name,
+    crd.tabular.tableName.quoted,
+    alias = None
+  )
 }
 
 /** Something which can be added to sql""-interpolation without further checking. */

@@ -127,11 +127,14 @@ class QueryBuilderTest extends TestBaseWithH2 {
   }
 
   it should "work with Query2" in new EnvWithSamples {
-    val withoutAge = Query2
+    val withoutAgeQuery = Query2
       .make[Person]
       .filter(_.age.isNull)
       .map(x => (x.id, x.name))
-      .all()
+
+    println(s"SQL = ${withoutAgeQuery.toSql}")
+
+    val withoutAge = withoutAgeQuery.all()
 
     withoutAge should contain theSameElementsAs Seq(2 -> "Bob", 3 -> "Charly")
   }

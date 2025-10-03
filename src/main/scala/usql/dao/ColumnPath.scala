@@ -49,6 +49,9 @@ trait ColumnPath[R, T] extends Selectable with SqlIdentifying with Rep[T] {
       case multiple => multiple.mkString("[", ",", "[")
     }
   }
+
+  /** Returns true if this is a default projection from T to T without any other things */
+  private[usql] def isDefault: Boolean = false
 }
 
 object ColumnPath {
