@@ -147,6 +147,46 @@ object SqlFielded {
 
     override def optionalize: SqlFielded[Optionalize[Option[T]]] = this
   }
+
+  /** An SqlFielded with only one instance. */
+  case class PseudoFielded[T](c: SqlColumn[T]) extends SqlFielded[T] {
+    override def fields: Seq[Field[_]] = Seq(
+      Field.Column("", c)
+    )
+
+    override protected[dao] def split(value: T): Seq[Any] = {
+      Seq(value)
+    }
+
+    override protected[dao] def build(fieldValues: Seq[Any]): T = {
+      fieldValues.head.asInstanceOf[T]
+    }
+
+    override def isOptional: Boolean = {
+      c.isOptional
+    }
+  }
+
+  case class ConcatFielded[L, R](left: SqlFielded[L], right: SqlFielded[R]) extends SqlFielded[(L, R)] {
+    override def fields: Seq[Field[_]] = {
+      Seq(
+        Field.Group("_1", ColumnGroupMapping.Anonymous, "", left),
+        Field.Group("_2", ColumnGroupMapping.Anonymous, "", right)
+      )
+    }
+
+    override protected[dao] def split(value: (L, R)): Seq[Any] = {
+      Seq(value._1, value._2)
+    }
+
+    override protected[dao] def build(fieldValues: Seq[Any]): (L, R) = {
+      (fieldValues.head.asInstanceOf[L], fieldValues(1).asInstanceOf[R])
+    }
+
+    override def isOptional: Boolean = {
+      false
+    }
+  }
 }
 
 /** A Field of a case class. */

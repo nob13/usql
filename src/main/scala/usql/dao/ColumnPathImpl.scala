@@ -24,23 +24,7 @@ private[usql] case class ColumnPathAlias[R, T](underlying: ColumnPath[R, T], ali
   }
 
   private def aliasify[X](fielded: SqlFielded[X]): SqlFielded[X] = {
-    val updatedFields = fielded.fields.map {
-      case c: Field.Column[?] => c.copy(column = aliasify(c.column))
-      case g: Field.Group[?]  =>
-        g.copy(
-          fielded = aliasify(g.fielded)
-        )
-    }
-
-    new SqlFielded[X] {
-      override def fields: Seq[Field[_]] = updatedFields
-
-      override protected[dao] def split(value: X): Seq[Any] = fielded.split(value)
-
-      override protected[dao] def build(fieldValues: Seq[Any]): X = fielded.build(fieldValues)
-
-      override def isOptional: Boolean = fielded.isOptional
-    }
+    SqlFielded.MappedSqlFielded(fielded, _.copy(alias = Some(alias)))
   }
 
   private def aliasify[X](c: SqlColumn[X]): SqlColumn[X] = {
@@ -90,7 +74,9 @@ private[usql] abstract class ColumnPathAtFielded[R, T](
 ) extends ColumnPath[R, T] {
   override def selectDynamic(name: String): ColumnPath[R, _] = {
     val (field, fieldIdx) = fielded.fields.view.zipWithIndex.find(_._1.fieldName == name).getOrElse {
-      throw new IllegalStateException(s"Unknown field ${name}")
+      throw new IllegalStateException(
+        s"Unknown field ${name}, expected: one of ${fielded.fields.map(_.fieldName).mkString("[", ",", "]")}"
+      )
     }
     selectField(name: String, field, fieldIdx)
   }

@@ -8,7 +8,7 @@ trait Query2[T] {
   final type BPath    = ColumnPath[T, T]
   final type DPath[X] = ColumnPath[T, X]
 
-  private def basePath: BPath = ColumnPath.make[T](using fielded)
+  protected def basePath: BPath = ColumnPath.make[T](using fielded)
 
   /** Convert this Query to SQL. */
   def toSql: Sql
@@ -33,7 +33,9 @@ trait Query2[T] {
   def filter(f: BPath => Rep[Boolean]): Query2[T] = GenericFilter[T](List(f(basePath)), this)
 
   /** Project values. */
-  def project[R](p: ColumnPath[T, R]): Query2[R] = GenericTableProject(p, this)
+  def project[P](p: ColumnPath[T, P]): Query2[P] = {
+    GenericTableProject(p, this, Query2.ensureFielded(p.structure))
+  }
 
   def one()(using cp: ConnectionProvider): Option[T] = {
     Query(toSql).one()(using fielded.rowDecoder)
@@ -54,43 +56,59 @@ object Query2 {
 
     override def fielded: SqlFielded[T] = table
 
-    override def project[R](p: ColumnPath[T, R]): Query2[R] = TableProject(p, table)
+    override def project[P](p: ColumnPath[T, P]): Query2[P] = {
+      val fielded = p.structure match {
+        case f: SqlFielded[P] => f
+        case c: SqlColumn[P]  => SqlFielded.PseudoFielded(c)
+      }
+      TableProject(p, table, ensureFielded(p.structure))
+    }
   }
 
-  case class TableProject[T, B](columnPath: ColumnPath[B, T], table: SqlTabular[B]) extends Query2[T] {
+  case class TableProject[T, B](columnPath: ColumnPath[B, T], table: SqlTabular[B], fielded: SqlFielded[T])
+      extends Query2[T] {
     override def toSql: Sql = sql"SELECT ${columnPath.toInterpolationParameter} FROM ${table.tableName}"
-
-    override def fielded: SqlFielded[T] = ???
   }
 
-  case class GenericTableProject[T, B](columnPath: ColumnPath[B, T], base: Query2[B]) extends Query2[T] {
-    // TODO: This needs propably a renaming step.
+  case class GenericTableProject[T, P](columnPath: ColumnPath[T, P], base: Query2[T], fielded: SqlFielded[P])
+      extends Query2[P] {
     override def toSql: Sql = sql"SELECT ${columnPath.toInterpolationParameter} FROM (${base.toSql})"
-
-    override def fielded: SqlFielded[T] = ???
-
-    override def project[R](p: ColumnPath[T, R]): Query2[R] = ???
   }
 
   case class GenericFilter[T](filters: Seq[Rep[Boolean]] = Nil, base: Query2[T]) extends Query2[T] {
-    override def toSql: Sql = ???
 
-    override def fielded: SqlFielded[T] = ???
+    override def toSql: Sql = {
+      val filtersSql: Rep[Boolean] = filters.reduce(_ && _)
+      sql"SELECT * FROM (${base.toSql}) WHERE ${filtersSql.toInterpolationParameter}"
+    }
 
-    override def filter(f: BPath => Rep[Boolean]): Query2[T] = ???
+    override def fielded: SqlFielded[T] = base.fielded
+
+    override def filter(f: BPath => Rep[Boolean]): Query2[T] = copy(
+      filters = filters :+ f(basePath)
+    )
   }
 
   case class GenericJoin[L, R](left: Query2[L], right: Query2[R], exp: Rep[Boolean]) extends Query2[(L, R)] {
-    override def toSql: Sql = ???
+    override def toSql: Sql =
+      sql"SELECT * FROM (${left.toSql}) JOIN (${right.toSql}) ON (${exp.toInterpolationParameter})"
 
-    override def fielded: SqlFielded[(L, R)] = ???
+    override def fielded: SqlFielded[(L, R)] = SqlFielded.ConcatFielded(left.fielded, right.fielded)
 
   }
 
   case class GenericLeftJoin[L, R](left: Query2[L], right: Query2[R], exp: Rep[Boolean])
       extends Query2[(L, Option[R])] {
-    override def toSql: Sql = ???
+    override def toSql: Sql =
+      sql"SELECT * FROM (${left.toSql}) LEFT JOIN (${right.toSql}) ON (${exp.toInterpolationParameter})"
 
-    override def fielded: SqlFielded[(L, Option[R])] = ???
+    override def fielded: SqlFielded[(L, Option[R])] = SqlFielded.ConcatFielded(left.fielded, SqlFielded.OptionalSqlFielded(right.fielded))
+  }
+
+  private def ensureFielded[T](in: SqlColumn[T] | SqlFielded[T]): SqlFielded[T] = {
+    in match {
+      case f: SqlFielded[T] => f
+      case c: SqlColumn[T]  => SqlFielded.PseudoFielded(c)
+    }
   }
 }

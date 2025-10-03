@@ -33,19 +33,19 @@ trait Rep[T] {
     SqlRep(sql"${toInterpolationParameter} >= ${rep.toInterpolationParameter}")
   }
 
-  def &&(using ev: T => Boolean)(rep: Rep[Boolean]): Rep[Boolean] = {
+  def &&(using T =:= Boolean)(rep: Rep[Boolean]): Rep[Boolean] = {
     SqlRep(sql"${toInterpolationParameter} AND ${rep.toInterpolationParameter}")
   }
 
-  def ||(using ev: T => Boolean)(rep: Rep[Boolean]): Rep[Boolean] = {
+  def ||(using T =:= Boolean)(rep: Rep[Boolean]): Rep[Boolean] = {
     SqlRep(sql"${toInterpolationParameter} OR ${rep.toInterpolationParameter}")
   }
 
-  def isNull(using ev: T => Option[?]): Rep[Boolean] = {
+  def isNull(using T => Option[?]): Rep[Boolean] = {
     SqlRep(sql"${toInterpolationParameter} IS NULL")
   }
 
-  def isNotNull(using ev: T => Option[?]): Rep[Boolean] = {
+  def isNotNull(using T => Option[?]): Rep[Boolean] = {
     SqlRep(sql"${toInterpolationParameter} IS NOT NULL")
   }
 }

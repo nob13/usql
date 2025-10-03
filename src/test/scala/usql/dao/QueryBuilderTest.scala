@@ -130,26 +130,29 @@ class QueryBuilderTest extends TestBaseWithH2 {
     val withoutAge = Query2
       .make[Person]
       .filter(_.age.isNull)
-      // .map(x => (x.name, x.age)) // TODO
-      .map(x => x.name)
+      .map(x => (x.id, x.name))
       .all()
 
-    withoutAge should contain theSameElementsAs Seq("Alice", "Bob")
+    withoutAge should contain theSameElementsAs Seq(2 -> "Bob", 3 -> "Charly")
   }
 
   it should "join with Query2" in new EnvWithSamples {
     val foo = Query2
       .make[Person]
-      .join(Query2.make[PersonPermission])(_.id == _.personId)
-      .join(Query2.make[Permission])(_._2.permissionId == _.id)
+      .join(Query2.make[PersonPermission])(_.id === _.personId)
+      .join(Query2.make[Permission])(_._2.permissionId === _.id)
       .filter(_._1._1.age.isNotNull)
       .map(_._1._1.name)
 
+    foo.all() shouldBe empty // TODO
+
     val foo2 = Query2
       .make[Person]
-      .leftJoin(Query2.make[PersonPermission])(_.id == _.personId)
-      .leftJoin(Query2.make[Permission])(_._2.permissionId == _.id)
+      .leftJoin(Query2.make[PersonPermission])(_.id === _.personId)
+      .leftJoin(Query2.make[Permission])(_._2.permissionId === _.id)
       .filter(_._1._1.age.isNotNull)
       .map(_._1._1.name)
+
+    foo2.all() shouldBe empty // TODO
   }
 }
