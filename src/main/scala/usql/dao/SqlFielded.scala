@@ -68,6 +68,8 @@ object SqlFielded {
     override protected[dao] def split(value: T): Seq[Any] = splitter(value)
 
     override protected[dao] def build(fieldValues: Seq[Any]): T = builder(fieldValues.toList)
+
+    override def isOptional: Boolean = false
   }
 
   inline def derived[T <: Product: Mirror.ProductOf](using nm: NameMapping = NameMapping.Default): SqlFielded[T] =
@@ -91,6 +93,8 @@ object SqlFielded {
     override protected[dao] def split(value: T): Seq[Any] = underlying.split(value)
 
     override protected[dao] def build(fieldValues: Seq[Any]): T = underlying.build(fieldValues)
+
+    override def isOptional: Boolean = underlying.isOptional
   }
 
   case class OptionalSqlFielded[T](underlying: SqlFielded[T]) extends SqlFielded[Option[T]] {
@@ -126,6 +130,8 @@ object SqlFielded {
     }
 
     private def nullValue: Seq[Any] = Seq.fill(fields.size)(None)
+
+    override def isOptional: Boolean = true
   }
 }
 

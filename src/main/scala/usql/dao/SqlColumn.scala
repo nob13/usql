@@ -16,4 +16,6 @@ case class SqlColumn[T](
   override def toString: String = {
     s"${id}: ${dataType}"
   }
+
+  override def isOptional: Boolean = dataType.isOptional
 }

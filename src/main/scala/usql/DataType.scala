@@ -93,12 +93,10 @@ trait DataType[T] {
   }
 
   /** Returns the optional variant of this data type. */
-  def optionalize: DataType[?] = {
-    this match {
-      case o: DataType.OptionalDataType[?] => o
-      case d: DataType[?]                  => DataType.OptionalDataType(this)
-    }
-  }
+  def optionalize: DataType[?] = DataType.OptionalDataType(this)
+
+  /** Returns true if this is an optional value. */
+  def isOptional: Boolean = false
 }
 
 object DataType {
@@ -134,6 +132,10 @@ object DataType {
     }
 
     override def jdbcType: JDBCType = underlying.jdbcType
+
+    override def optionalize: DataType[_] = this
+
+    override def isOptional: Boolean = true
   }
 
   implicit def optionType[T](using dt: DataType[T]): DataType[Option[T]] = new OptionalDataType(dt)

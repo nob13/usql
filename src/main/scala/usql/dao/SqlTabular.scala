@@ -31,7 +31,8 @@ object SqlTabular {
 
   case class SimpleTabular[T](
       tableName: SqlIdentifier,
-      fielded: SqlFielded[T]
+      fielded: SqlFielded[T],
+      isOptional: Boolean
   ) extends SqlTabular[T] {
     override def fields: Seq[Field[?]] = fielded.fields
 

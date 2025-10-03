@@ -112,6 +112,9 @@ class ColumnPathTest extends TestBase {
     )
 
     biz.buildGetter(None) shouldBe None
+
+    // Wir haben bereits einen Check, ob das Ergebnis Optional ist. Nur die richtige Stelle muss noch herausgefunden werden
+
     biz.buildGetter(Some(sample)) shouldBe Some("Hallo") // TODO: We must de-optionalize values in a return statement
     biz.buildGetter(Some(sample.copy(sub = sample.sub.copy(sub2 = sample.sub.sub2.copy(biz = None))))) shouldBe None
   }

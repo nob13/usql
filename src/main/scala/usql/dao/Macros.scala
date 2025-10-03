@@ -61,7 +61,8 @@ object Macros {
 
     SqlTabular.SimpleTabular(
       tableName = tableName,
-      fielded = fielded
+      fielded = fielded,
+      isOptional = false
     )
   }
 

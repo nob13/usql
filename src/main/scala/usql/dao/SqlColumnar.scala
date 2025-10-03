@@ -22,4 +22,7 @@ trait SqlColumnar[T] {
 
   /** Filler for a full row. */
   def rowEncoder: RowEncoder[T]
+
+  /** Returns true if T is an optional type */
+  def isOptional: Boolean
 }
