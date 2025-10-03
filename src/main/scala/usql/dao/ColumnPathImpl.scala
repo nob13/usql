@@ -206,3 +206,28 @@ private[usql] object ColumnPathOptionalize {
     case otherwise                      => ColumnPathOptionalize(otherwise)
   }
 }
+
+private[usql] case class ColumnPathChain[A, B, C](
+    first: ColumnPath[A, B],
+    second: ColumnPath[B, C]
+) extends ColumnPath[A, C] {
+  override def selectDynamic(name: String): ColumnPath[A, _] = {
+    copy(
+      second = second.selectDynamic(name)
+    )
+  }
+
+  override def buildGetter: A => C = {
+    val firstGetter  = first.buildGetter
+    val secondGetter = second.buildGetter
+    in => secondGetter(firstGetter(in))
+  }
+
+  override def structure: SqlFielded[C] | SqlColumn[C] = {
+    second.structure
+  }
+
+  override def buildIdentifier: Seq[SqlIdentifier] = {
+    second.buildIdentifier
+  }
+}

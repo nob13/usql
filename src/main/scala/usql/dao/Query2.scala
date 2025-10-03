@@ -77,10 +77,8 @@ object Query2 {
     }
 
     override def project[P2](p: ColumnPath[P, P2]): TableScan[T, P2] = {
-      // TODO: We need some kind of transitivity here
-      // HACK!
       copy(
-        projection = p.asInstanceOf[ColumnPath[T, P2]]
+        projection = ColumnPath.concat(projection, p)
       )
     }
   }
