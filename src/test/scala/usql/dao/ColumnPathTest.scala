@@ -1,6 +1,6 @@
 package usql.dao
 
-import usql.{DataType, SqlIdentifier}
+import usql.{DataType, SqlColumnId}
 import usql.util.TestBase
 import usql.profiles.BasicProfile.*
 
@@ -43,14 +43,14 @@ class ColumnPathTest extends TestBase {
   )
 
   it should "fetch identifiers" in {
-    path.x.buildIdentifier shouldBe Seq(SqlIdentifier.fromString("x"))
-    path.sub.a.buildIdentifier shouldBe Seq(SqlIdentifier.fromString("a"))
-    path.sub.sub2.buildIdentifier shouldBe Seq(
-      SqlIdentifier.fromString("sub2_foo"),
-      SqlIdentifier.fromString("sub2_bar"),
-      SqlIdentifier.fromString("sub2_biz")
+    path.x.columnIds shouldBe Seq(SqlColumnId.fromString("x"))
+    path.sub.a.columnIds shouldBe Seq(SqlColumnId.fromString("a"))
+    path.sub.sub2.columnIds shouldBe Seq(
+      SqlColumnId.fromString("sub2_foo"),
+      SqlColumnId.fromString("sub2_bar"),
+      SqlColumnId.fromString("sub2_biz")
     )
-    path.sub.sub2.foo.buildIdentifier shouldBe Seq(SqlIdentifier.fromString("sub2_foo"))
+    path.sub.sub2.foo.columnIds shouldBe Seq(SqlColumnId.fromString("sub2_foo"))
   }
 
   it should "fetch elements" in {
@@ -87,9 +87,9 @@ class ColumnPathTest extends TestBase {
     val sub2Structure                                           = sub2.structure.asInstanceOf[SqlFielded[Option[SubSubElement]]]
 
     sub2Structure.columns shouldBe Seq(
-      SqlColumn(SqlIdentifier.fromString("sub2_foo"), DataType.get[Option[Boolean]]),
-      SqlColumn(SqlIdentifier.fromString("sub2_bar"), DataType.get[Option[Int]]),
-      SqlColumn(SqlIdentifier.fromString("sub2_biz"), DataType.get[Option[String]])
+      SqlColumn(SqlColumnId.fromString("sub2_foo"), DataType.get[Option[Boolean]]),
+      SqlColumn(SqlColumnId.fromString("sub2_bar"), DataType.get[Option[Int]]),
+      SqlColumn(SqlColumnId.fromString("sub2_biz"), DataType.get[Option[String]])
     )
 
     sub2Structure.split(None) shouldBe Seq(None, None, None)
@@ -107,7 +107,7 @@ class ColumnPathTest extends TestBase {
     // Note: UnpackOption helps here, that the type is a String, not Option[String]
     val biz: ColumnPath[Option[Sample], Option[String]] = sub2.biz
     biz.structure.columns shouldBe Seq(
-      SqlColumn(SqlIdentifier.fromString("sub2_biz"), DataType.get[Option[String]])
+      SqlColumn(SqlColumnId.fromString("sub2_biz"), DataType.get[Option[String]])
     )
 
     biz.buildGetter(None) shouldBe None
@@ -142,7 +142,7 @@ class ColumnPathTest extends TestBase {
     val second    = ColumnPath.make[SubSubElement].foo
     val concatted = ColumnPath.concat(first, second)
     concatted.structure.columns shouldBe Seq(
-      SqlColumn(SqlIdentifier.fromString("sub2_foo"), DataType.get[Boolean])
+      SqlColumn(SqlColumnId.fromString("sub2_foo"), DataType.get[Boolean])
     )
   }
 
@@ -151,7 +151,7 @@ class ColumnPathTest extends TestBase {
     val second    = ColumnPath.makeOpt[SubSubElement].foo
     val concatted = ColumnPath.concat(first, second)
     concatted.structure.columns shouldBe Seq(
-      SqlColumn(SqlIdentifier.fromString("sub2_foo"), DataType.get[Option[Boolean]])
+      SqlColumn(SqlColumnId.fromString("sub2_foo"), DataType.get[Option[Boolean]])
     )
     concatted.buildGetter(None) shouldBe None
     concatted.buildGetter(Some(sample)) shouldBe Some(sample.sub.sub2.foo)

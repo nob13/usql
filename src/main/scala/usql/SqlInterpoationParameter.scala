@@ -44,7 +44,7 @@ object SqlInterpolationParameter {
   }
 
   /** A single identifier. */
-  case class IdentifierParameter(i: SqlIdentifier) extends SqlInterpolationParameter {
+  case class IdentifierParameter(i: SqlColumnId) extends SqlInterpolationParameter {
     override def toSql: String = i.serialize
 
     override def collectAliases: Set[String] = i.alias.toSet
@@ -59,7 +59,7 @@ object SqlInterpolationParameter {
   }
 
   /** Multiple identifiers. */
-  case class IdentifiersParameter(i: Seq[SqlIdentifier]) extends SqlInterpolationParameter {
+  case class IdentifiersParameter(i: Seq[SqlColumnId]) extends SqlInterpolationParameter {
     override def toSql: String = {
       i.iterator.map(_.serialize).mkString(",")
     }
@@ -126,11 +126,11 @@ object SqlInterpolationParameter {
     new SqlParameter(value, dataType)
   }
 
-  implicit def toIdentifierParameter(i: SqlIdentifying): IdentifiersParameter       = IdentifiersParameter(
-    i.buildIdentifier
+  implicit def toIdentifierParameter(i: SqlColumnIdentifying): IdentifiersParameter       = IdentifiersParameter(
+    i.columnIds
   )
-  implicit def toIdentifiersParameter(i: Seq[SqlIdentifying]): IdentifiersParameter = IdentifiersParameter(
-    i.flatMap(_.buildIdentifier)
+  implicit def toIdentifiersParameter(i: Seq[SqlColumnIdentifying]): IdentifiersParameter = IdentifiersParameter(
+    i.flatMap(_.columnIds)
   )
   implicit def columnsParameter(c: Seq[SqlColumn[?]]): IdentifiersParameter         = IdentifiersParameter(c.map(_.id))
   implicit def rawBlockParameter(rawPart: SqlRawPart): RawBlockParameter            = {

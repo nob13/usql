@@ -1,11 +1,11 @@
 package usql.dao
 
-import usql.{DataType, Optionalize, RowDecoder, RowEncoder, SqlIdentifier, SqlRawPart}
+import usql.{DataType, Optionalize, RowDecoder, RowEncoder, SqlColumnId, SqlRawPart}
 
 /** A Single Column */
 case class SqlColumn[T](
-    id: SqlIdentifier,
-    dataType: DataType[T]
+                         id: SqlColumnId,
+                         dataType: DataType[T]
 ) extends SqlColumnar[T] {
   override def columns: Seq[SqlColumn[_]] = List(this)
 

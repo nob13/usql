@@ -108,7 +108,7 @@ abstract class KeyedCrudBase[K, T](using keyDataType: DataType[K]) extends CrdBa
   final type KeyColumnPath = ColumnPath[T, K]
 
   /** The column of the key */
-  lazy val keyColumn: SqlIdentifying = key
+  lazy val keyColumn: SqlColumnIdentifying = key
 
   def keyOf(value: T): K = cachedKeyGetter(value)
 

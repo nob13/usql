@@ -1,6 +1,6 @@
 package usql.dao
 
-import usql.{Optionalize, SqlIdentifying, SqlInterpolationParameter, UnOption}
+import usql.{Optionalize, SqlColumnIdentifying, SqlInterpolationParameter, UnOption}
 
 import scala.annotation.implicitNotFound
 import scala.language.implicitConversions
@@ -15,7 +15,7 @@ import scala.language.implicitConversions
  * @tparam T
  *   end path
  */
-trait ColumnPath[R, T] extends Selectable with SqlIdentifying with Rep[T] {
+trait ColumnPath[R, T] extends Selectable with SqlColumnIdentifying with Rep[T] {
 
   /**
    * If we are coming from an optional value, we go into an optional value.
@@ -39,10 +39,10 @@ trait ColumnPath[R, T] extends Selectable with SqlIdentifying with Rep[T] {
   /** The structure of T */
   def structure: SqlFielded[T] | SqlColumn[T]
 
-  override def toInterpolationParameter: SqlInterpolationParameter = buildIdentifier
+  override final def toInterpolationParameter: SqlInterpolationParameter = columnIds
 
   override def toString: String = {
-    buildIdentifier match {
+    columnIds match {
       case Seq(one) => one.toString
       case multiple => multiple.mkString("[", ",", "[")
     }

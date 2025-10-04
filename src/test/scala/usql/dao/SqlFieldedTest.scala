@@ -1,6 +1,6 @@
 package usql.dao
 
-import usql.SqlIdentifier
+import usql.SqlColumnId
 import usql.util.TestBase
 import usql.profiles.BasicProfile.*
 
@@ -30,19 +30,19 @@ class SqlFieldedTest extends TestBase {
     val adapter = summon[SqlFielded[Person]]
     adapter.fields.map(_.fieldName) shouldBe Seq("id", "name", "age", "coordinate")
     adapter.columns
-      .map(_.id) shouldBe SqlIdentifier.fromStrings("id", "long_name", "age", "coordinate_x", "coordinate_y")
+      .map(_.id) shouldBe SqlColumnId.fromStrings("id", "long_name", "age", "coordinate_x", "coordinate_y")
 
-    adapter.cols.buildIdentifier shouldBe SqlIdentifier.fromStrings(
+    adapter.cols.columnIds shouldBe SqlColumnId.fromStrings(
       "id",
       "long_name",
       "age",
       "coordinate_x",
       "coordinate_y"
     )
-    adapter.cols.name.buildIdentifier shouldBe SqlIdentifier.fromStrings("long_name")
-    Person.cols.name.buildIdentifier shouldBe SqlIdentifier.fromStrings("long_name")
+    adapter.cols.name.columnIds shouldBe SqlColumnId.fromStrings("long_name")
+    Person.cols.name.columnIds shouldBe SqlColumnId.fromStrings("long_name")
 
-    adapter.cols.coordinate.x.buildIdentifier shouldBe SqlIdentifier.fromStrings("coordinate_x")
-    Person.cols.coordinate.x.buildIdentifier shouldBe SqlIdentifier.fromStrings("coordinate_x")
+    adapter.cols.coordinate.x.columnIds shouldBe SqlColumnId.fromStrings("coordinate_x")
+    Person.cols.coordinate.x.columnIds shouldBe SqlColumnId.fromStrings("coordinate_x")
   }
 }

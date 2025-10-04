@@ -1,15 +1,15 @@
 package usql.dao
 
-import usql.SqlIdentifier
+import usql.SqlColumnId
 
 /** Maps Column / Table names. */
 trait NameMapping {
 
   /** Converts a column name to SQL identifiers */
-  def columnToSql(name: String): SqlIdentifier
+  def columnToSql(name: String): SqlColumnId
 
   /** Converts a case class (full qualified) name to SQL. */
-  def caseClassToTableName(name: String): SqlIdentifier
+  def caseClassToTableName(name: String): SqlColumnId
 }
 
 object NameMapping {
@@ -17,10 +17,10 @@ object NameMapping {
   /** Simple Snake Case Conversion with checking against escaping. */
   object Default extends NameMapping {
 
-    override def columnToSql(name: String): SqlIdentifier = SqlIdentifier.fromString(snakeCase(name))
+    override def columnToSql(name: String): SqlColumnId = SqlColumnId.fromString(snakeCase(name))
 
-    override def caseClassToTableName(name: String): SqlIdentifier = {
-      SqlIdentifier.fromString(snakeCase(getSimpleClassName(name)))
+    override def caseClassToTableName(name: String): SqlColumnId = {
+      SqlColumnId.fromString(snakeCase(getSimpleClassName(name)))
     }
   }
 

@@ -1,21 +1,21 @@
 package usql
 
 /** Something which can produce an identifier. */
-trait SqlIdentifying {
+trait SqlColumnIdentifying {
 
-  /** Build the identifier. */
-  def buildIdentifier: Seq[SqlIdentifier]
+  /** Returns column idenfitiers. */
+  def columnIds: Seq[SqlColumnId]
 }
 
 /**
- * An SQL Identifier (table or colum name
+ * Identifies an Sql Column
  * @param name
  *   raw name
  * @param quoted
  *   if true, the identifier will be quoted.
  */
 @throws[IllegalArgumentException]("If name contains a \"")
-case class SqlIdentifier(name: String, quoted: Boolean, alias: Option[String] = None) extends SqlIdentifying {
+case class SqlColumnId(name: String, quoted: Boolean, alias: Option[String] = None) extends SqlColumnIdentifying {
   require(!name.contains("\""), "Identifiers may not contain \"")
 
   /** Serialize the identifier. */
@@ -43,25 +43,25 @@ case class SqlIdentifier(name: String, quoted: Boolean, alias: Option[String] = 
 
   override def toString: String = serialize
 
-  override def buildIdentifier: Seq[SqlIdentifier] = List(this)
+  override def columnIds: Seq[SqlColumnId] = List(this)
 }
 
-object SqlIdentifier {
-  given stringToIdentifier: Conversion[String, SqlIdentifier] with {
-    override def apply(x: String): SqlIdentifier = fromString(x)
+object SqlColumnId {
+  given stringToIdentifier: Conversion[String, SqlColumnId] with {
+    override def apply(x: String): SqlColumnId = fromString(x)
   }
 
-  def fromString(s: String): SqlIdentifier = {
+  def fromString(s: String): SqlColumnId = {
     if s.length >= 2 && s.startsWith("\"") && s.endsWith("\"") then {
-      SqlIdentifier(s.drop(1).dropRight(1), true)
+      SqlColumnId(s.drop(1).dropRight(1), true)
     } else {
       if SqlReservedWords.isReserved(s) then {
-        SqlIdentifier(s, quoted = true)
+        SqlColumnId(s, quoted = true)
       } else {
-        SqlIdentifier(s, quoted = false)
+        SqlColumnId(s, quoted = false)
       }
     }
   }
 
-  def fromStrings(s: String*): Seq[SqlIdentifier] = s.map(fromString)
+  def fromStrings(s: String*): Seq[SqlColumnId] = s.map(fromString)
 }

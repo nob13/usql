@@ -11,7 +11,7 @@ class HelloDbTest extends TestBaseWithH2 {
       |CREATE TABLE "user" (id INT PRIMARY KEY, name VARCHAR);
       |""".stripMargin
 
-  val tableName = SqlIdentifier.fromString("user")
+  val tableName = SqlColumnId.fromString("user")
 
   it should "work" in {
     sql"""INSERT INTO "user" (id, name) VALUES (${1}, ${"Hello World"})""".update.run()
@@ -47,7 +47,7 @@ class HelloDbTest extends TestBaseWithH2 {
   }
 
   it should "allow identifiers" in {
-    val userTable = SqlIdentifier.fromString("user")
+    val userTable = SqlColumnId.fromString("user")
     sql"""SELECT id, name FROM ${userTable}""".query.one[(Int, String)]() shouldBe empty
   }
 

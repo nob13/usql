@@ -1,6 +1,6 @@
 package usql.dao
 
-import usql.{ConnectionProvider, DataType, Query, RowDecoder, Sql, SqlIdentifier, SqlInterpolationParameter, sql}
+import usql.{ConnectionProvider, DataType, Query, RowDecoder, Sql, SqlColumnId, SqlInterpolationParameter, sql}
 
 import scala.Tuple.:*
 
@@ -74,7 +74,7 @@ object QueryBuilder {
     def select[A1](col1: ColumnPath[T, T] => ColumnPath[T, A1])(using rowDecoder: RowDecoder[A1]): Selected[T, A1] = {
       Selected[T, A1](
         this,
-        List(col1(path).buildIdentifier).flatten,
+        List(col1(path).columnIds).flatten,
         rowDecoder
       )
     }
@@ -86,8 +86,8 @@ object QueryBuilder {
       Selected(
         this,
         List(
-          col1(path).buildIdentifier,
-          col2(path).buildIdentifier
+          col1(path).columnIds,
+          col2(path).columnIds
         ).flatten,
         rowDecoder
       )
@@ -101,16 +101,16 @@ object QueryBuilder {
       Selected[T, (A1, A2, A3)](
         this,
         List(
-          col1(path).buildIdentifier,
-          col2(path).buildIdentifier,
-          col3(path).buildIdentifier
+          col1(path).columnIds,
+          col2(path).columnIds,
+          col3(path).columnIds
         ).flatten,
         rowDecoder
       )
     }
   }
 
-  case class Selected[T, R](from: Select[T], selection: List[SqlIdentifier], decoder: RowDecoder[R]) {
+  case class Selected[T, R](from: Select[T], selection: List[SqlColumnId], decoder: RowDecoder[R]) {
     private def toQuery: Query = {
       val where: Sql = if from.reverseWherePredicates.isEmpty then {
         Sql(Nil)

@@ -1,7 +1,7 @@
 package usql.dao
 
 import usql.dao.Query2.{GenericFilter, GenericJoin, GenericLeftJoin, GenericTableProject}
-import usql.{ConnectionProvider, Query, Sql, SqlIdentifier, SqlInterpolationParameter, sql}
+import usql.{ConnectionProvider, Query, Sql, SqlColumnId, SqlInterpolationParameter, sql}
 
 import java.util.UUID
 

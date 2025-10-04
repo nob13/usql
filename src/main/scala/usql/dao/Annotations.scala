@@ -1,6 +1,6 @@
 package usql.dao
 
-import usql.SqlIdentifier
+import usql.SqlColumnId
 
 import scala.annotation.StaticAnnotation
 
@@ -9,7 +9,7 @@ case class TableName(name: String) extends StaticAnnotation
 
 /** Annotation to override the default column name in [[SqlColumnar]] */
 case class ColumnName(name: String) extends StaticAnnotation {
-  def id: SqlIdentifier = SqlIdentifier.fromString(name)
+  def id: SqlColumnId = SqlColumnId.fromString(name)
 }
 
 /**

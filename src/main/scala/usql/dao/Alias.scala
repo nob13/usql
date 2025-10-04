@@ -1,6 +1,6 @@
 package usql.dao
 
-import usql.{SqlIdentifier, SqlRawPart}
+import usql.{SqlColumnId, SqlRawPart}
 
 /** Aliases a table name for use in Join Statements. */
 case class Alias[T](
@@ -9,12 +9,12 @@ case class Alias[T](
 ) {
 
   /** Alias one identifier */
-  def apply(c: SqlIdentifier): SqlRawPart = {
-    SqlRawPart(this.aliasName + "." + c.serialize)
+  def apply(c: SqlColumnId): SqlColumnId = {
+    c.copy(alias = Some(aliasName))
   }
 
   /** Refers to all aliased columns */
-  def columns: Seq[SqlIdentifier] = {
+  def columns: Seq[SqlColumnId] = {
     tabular.columns.map { c =>
       c.id.copy(
         alias = Some(aliasName)

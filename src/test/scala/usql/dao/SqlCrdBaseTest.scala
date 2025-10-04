@@ -1,6 +1,6 @@
 package usql.dao
 
-import usql.SqlIdentifier
+import usql.SqlColumnId
 import usql.profiles.BasicProfile.*
 import usql.util.TestBaseWithH2
 

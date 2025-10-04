@@ -1,6 +1,6 @@
 package usql.dao
 
-import usql.{Optionalize, RowDecoder, RowEncoder, SqlIdentifier}
+import usql.{Optionalize, RowDecoder, RowEncoder, SqlColumnId}
 
 import java.sql.{PreparedStatement, ResultSet}
 import scala.deriving.Mirror
@@ -79,7 +79,7 @@ object SqlFielded {
   inline def derived[T <: Product: Mirror.ProductOf](using nm: NameMapping = NameMapping.Default): SqlFielded[T] =
     Macros.buildFielded[T]
 
-  case class MappedSqlFielded[T](underlying: SqlFielded[T], mapping: SqlIdentifier => SqlIdentifier)
+  case class MappedSqlFielded[T](underlying: SqlFielded[T], mapping: SqlColumnId => SqlColumnId)
       extends SqlFielded[T] {
     override def fields: Seq[Field[_]] = underlying.fields.map {
       case c: Field.Column[?] =>
@@ -225,10 +225,10 @@ object Field {
 
   /** A Field which maps to a nested case class */
   case class Group[T](
-      fieldName: String,
-      mapping: ColumnGroupMapping,
-      columnBaseName: SqlIdentifier,
-      fielded: SqlFielded[T]
+                       fieldName: String,
+                       mapping: ColumnGroupMapping,
+                       columnBaseName: SqlColumnId,
+                       fielded: SqlFielded[T]
   ) extends Field[T] {
     override def columns: Seq[SqlColumn[?]] =
       fielded.columns.map { column =>
@@ -237,7 +237,7 @@ object Field {
         )
       }
 
-    def mapChildColumnName(childColumnId: SqlIdentifier): SqlIdentifier = mapping.map(columnBaseName, childColumnId)
+    def mapChildColumnName(childColumnId: SqlColumnId): SqlColumnId = mapping.map(columnBaseName, childColumnId)
 
     override def decoder: RowDecoder[T] = fielded.rowDecoder
 

@@ -22,6 +22,6 @@ class SqlTabularTest extends TestBase {
     val tabular = SqlTabular.derived[WithNested]
     tabular.rowEncoder.cardinality shouldBe 6
     tabular.rowDecoder.cardinality shouldBe 6
-    tabular.columns.map(_.id) shouldBe Seq("a_x", "a_y", "x_s", "y_s", "c_x", "c_y").map(SqlIdentifier.fromString)
+    tabular.columns.map(_.id) shouldBe Seq("a_x", "a_y", "x_s", "y_s", "c_x", "c_y").map(SqlColumnId.fromString)
   }
 }

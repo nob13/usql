@@ -1,6 +1,6 @@
 package usql.dao
 
-import usql.{SqlIdentifier, SqlInterpolationParameter}
+import usql.{SqlColumnId, SqlInterpolationParameter}
 
 sealed trait TupleColumnPath[R, T <: Tuple] extends ColumnPath[R, T] {
   final override def structure: SqlFielded[T] = structureAt(1)
@@ -18,9 +18,7 @@ object TupleColumnPath {
 
     override def buildGetter: R => EmptyTuple = _ => EmptyTuple
 
-    override def toInterpolationParameter: SqlInterpolationParameter = SqlInterpolationParameter.Empty
-
-    override def buildIdentifier: Seq[SqlIdentifier] = Nil
+    override def columnIds: Seq[SqlColumnId] = Nil
 
     override def structureAt(tupleIdx: Int): SqlFielded[EmptyTuple] = emptyStructure
 
@@ -56,9 +54,7 @@ object TupleColumnPath {
       }
     }
 
-    override def toInterpolationParameter: SqlInterpolationParameter = buildIdentifier
-
-    override def buildIdentifier: Seq[SqlIdentifier] = head.buildIdentifier ++ tail.buildIdentifier
+    override def columnIds: Seq[SqlColumnId] = head.columnIds ++ tail.columnIds
 
     override def structureAt(tupleIdx: Int): SqlFielded[H *: T] = {
       val tailStructure = tail.structureAt(tupleIdx + 1)
@@ -80,7 +76,7 @@ object TupleColumnPath {
           Field.Group(
             s"_${tupleIdx}",
             ColumnGroupMapping.Anonymous,
-            SqlIdentifier.fromString(s"_${tupleIdx}"),
+            SqlColumnId.fromString(s"_${tupleIdx}"),
             f
           )
       }

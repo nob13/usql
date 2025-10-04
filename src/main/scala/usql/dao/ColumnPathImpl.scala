@@ -1,10 +1,10 @@
 package usql.dao
 
-import usql.{Optionalize, SqlIdentifier}
+import usql.{Optionalize, SqlColumnId}
 
 private[usql] abstract class ColumnPathAtFielded[R, T](
     fielded: SqlFielded[T],
-    parentMapping: SqlIdentifier => SqlIdentifier
+    parentMapping: SqlColumnId => SqlColumnId
 ) extends ColumnPath[R, T] {
   override def selectDynamic(name: String): ColumnPath[R, _] = {
     val (field, fieldIdx) = fielded.fields.view.zipWithIndex.find(_._1.fieldName == name).getOrElse {
@@ -30,9 +30,9 @@ private[usql] abstract class ColumnPathAtFielded[R, T](
   }
 
   /** Returns the column name mapping of the current element. */
-  protected def currentMapping: SqlIdentifier => SqlIdentifier = identity
+  protected def currentMapping: SqlColumnId => SqlColumnId = identity
 
-  private def childrenMapping: SqlIdentifier => SqlIdentifier = {
+  private def childrenMapping: SqlColumnId => SqlColumnId = {
     val pm = parentMapping
     val cm = currentMapping
     in => pm(cm(in))
@@ -51,7 +51,7 @@ private[usql] case class ColumnPathStart[R](fielded: SqlFielded[R])
 
   override def buildGetter: R => R = identity
 
-  override def buildIdentifier: Seq[SqlIdentifier] = fielded.columns.map(_.id)
+  override def columnIds: Seq[SqlColumnId] = fielded.columns.map(_.id)
 
   override def structure: SqlFielded[R] = fielded
 
@@ -61,18 +61,18 @@ private[usql] case class ColumnPathStart[R](fielded: SqlFielded[R])
 }
 
 private[usql] case class ColumnPathSelectGroup[R, P, T](
-    selected: String,
-    group: Field.Group[T],
-    parentMapping: SqlIdentifier => SqlIdentifier,
-    parent: ColumnPath[R, P],
-    subGetter: P => T
+                                                         selected: String,
+                                                         group: Field.Group[T],
+                                                         parentMapping: SqlColumnId => SqlColumnId,
+                                                         parent: ColumnPath[R, P],
+                                                         subGetter: P => T
 ) extends ColumnPathAtFielded[R, T](group.fielded, parentMapping) {
 
-  override def buildIdentifier: Seq[SqlIdentifier] = {
+  override def columnIds: Seq[SqlColumnId] = {
     group.columns.map(c => parentMapping(c.id))
   }
 
-  override protected def currentMapping: SqlIdentifier => SqlIdentifier = {
+  override protected def currentMapping: SqlColumnId => SqlColumnId = {
     group.mapChildColumnName
   }
 
@@ -87,11 +87,11 @@ private[usql] case class ColumnPathSelectGroup[R, P, T](
 }
 
 private[usql] case class ColumnPathSelectColumn[R, P, T](
-    selected: String,
-    column: SqlColumn[T],
-    mapping: SqlIdentifier => SqlIdentifier,
-    parent: ColumnPath[R, P],
-    subGetter: P => T
+                                                          selected: String,
+                                                          column: SqlColumn[T],
+                                                          mapping: SqlColumnId => SqlColumnId,
+                                                          parent: ColumnPath[R, P],
+                                                          subGetter: P => T
 ) extends ColumnPath[R, T] {
   override def selectDynamic(name: String): ColumnPath[R, _] = {
     throw new IllegalStateException(s"Can walk further column")
@@ -108,7 +108,7 @@ private[usql] case class ColumnPathSelectColumn[R, P, T](
     )
   }
 
-  override def buildIdentifier: Seq[SqlIdentifier] = {
+  override def columnIds: Seq[SqlColumnId] = {
     Seq(mapping(column.id))
   }
 
@@ -143,8 +143,8 @@ private[usql] case class ColumnPathOptionalize[R, T](underlying: ColumnPath[R, T
     }
   }
 
-  override def buildIdentifier: Seq[SqlIdentifier] = {
-    underlying.buildIdentifier
+  override def columnIds: Seq[SqlColumnId] = {
+    underlying.columnIds
   }
 
   override def prepend[R2](columnPath: ColumnPath[R2, R]): ColumnPath[R2, Optionalize[T]] = {
