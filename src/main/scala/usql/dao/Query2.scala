@@ -7,8 +7,7 @@ import java.util.UUID
 
 trait Query2[T] {
 
-  final type BPath    = ColumnPath[T, T]
-  final type DPath[X] = ColumnPath[T, X]
+  final type BPath = ColumnPath[T, T]
 
   protected def basePath: BPath = ColumnPath.make[T](using fielded)
 
@@ -22,7 +21,7 @@ trait Query2[T] {
   def fielded: SqlFielded[T]
 
   /** Map one element. */
-  def map[R0](f: BPath => DPath[R0]): Query2[R0] = project(f(basePath))
+  def map[R0](f: BPath => ColumnPath[T, R0]): Query2[R0] = project(f(basePath))
 
   /** Join two queries. */
   def join[R](right: Query2[R])(
@@ -158,6 +157,7 @@ object Query2 {
     }
 
     override def join[R](right: Query2[R])(on: (BPath, right.BPath) => Rep[Boolean]): Query2[(P, R)] = {
+      // If we are pure, we can directly combine the fromItems
       (for
         leftPure  <- this.asPureFromItem
         rightPure <- right.asPureFromItem
@@ -167,6 +167,20 @@ object Query2 {
         )
       }).getOrElse {
         super.join(right)(on)
+      }
+    }
+
+    override def leftJoin[R](right: Query2[R])(on: (BPath, right.BPath) => Rep[Boolean]): Query2[(P, Option[R])] = {
+      // If we are pure, we can directly combine the fromItems
+      (for
+        leftPure  <- this.asPureFromItem
+        rightPure <- right.asPureFromItem
+      yield {
+        makeSelect(
+          FromItem.LeftJoin(leftPure, rightPure, on(leftPure.basePath, rightPure.basePath))
+        )
+      }).getOrElse {
+        super.leftJoin(right)(on)
       }
     }
   }
