@@ -69,20 +69,23 @@ case class Sql(parts: Seq[(String, SqlInterpolationParameter)]) extends SqlBase 
   def simplifyAliases: Sql = {
     val collected                            = collectAliases
     val builder: mutable.Map[String, String] = mutable.Map.empty
+    val used: mutable.Set[String]            = mutable.Set.empty
     collected.foreach { alias =>
       // Try to keep the first character, its often better readable.
       val first = alias.take(1)
-      if !builder.contains(first) then {
+      if !used.contains(first) then {
         builder += (alias -> first)
+        used += first
       } else {
         val toUse = (for
           i        <- (0 until 100).view
           candidate = first + i
-          if !builder.contains(candidate)
+          if !used.contains(candidate)
         yield (candidate)).headOption.getOrElse {
           throw new IllegalStateException(s"Could not find a candidate replacement for ${alias}")
         }
         builder += (alias -> toUse)
+        used += toUse
       }
     }
     val mapping                              = builder.toMap

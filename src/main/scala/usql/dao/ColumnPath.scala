@@ -50,6 +50,9 @@ trait ColumnPath[R, T] extends Selectable with SqlColumnIdentifying with Rep[T] 
 
   /** Prepend a path. */
   private[usql] def prepend[R2](columnPath: ColumnPath[R2, R]): ColumnPath[R2, T]
+
+  /** Returns true if this is an empty path */
+  def isEmpty: Boolean = false
 }
 
 object ColumnPath {

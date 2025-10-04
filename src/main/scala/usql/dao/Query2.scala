@@ -1,6 +1,6 @@
 package usql.dao
 
-import usql.dao.Query2.{FromItem, GenericJoin, GenericLeftJoin}
+import usql.dao.Query2.{FromItem, makeSelect}
 import usql.{ConnectionProvider, Query, Sql, SqlColumnId, SqlInterpolationParameter, sql}
 
 import java.util.UUID
@@ -30,13 +30,19 @@ trait Query2[T] {
   ): Query2[(T, R)] = {
     val leftSource  = this.asFromItem()
     val rightSource = right.asFromItem()
-    GenericJoin(leftSource, rightSource, on(leftSource.basePath, rightSource.basePath))
+    val joinSource  = FromItem.InnerJoin(leftSource, rightSource, on(leftSource.basePath, rightSource.basePath))
+    makeSelect(joinSource)
   }
 
   /** Left Join two Queries */
   def leftJoin[R](right: Query2[R])(
       on: (BPath, right.BPath) => Rep[Boolean]
-  ): Query2[(T, Option[R])] = GenericLeftJoin(this, right, on(basePath, right.basePath))
+  ): Query2[(T, Option[R])] = {
+    val leftSource  = this.asFromItem()
+    val rightSource = right.asFromItem()
+    val joinSource  = FromItem.LeftJoin(leftSource, rightSource, on(leftSource.basePath, rightSource.basePath))
+    makeSelect(joinSource)
+  }
 
   /** Filter step. */
   def filter(f: BPath => Rep[Boolean]): Query2[T] = {
@@ -61,13 +67,16 @@ trait Query2[T] {
     val aliasName = s"X-${UUID.randomUUID()}"
     FromItem.Aliased(FromItem.SubSelect(this), aliasName)
   }
+
+  /** Returns the from item, if this Query is just returning the source. */
+  def asPureFromItem: Option[FromItem[T]]
 }
 
 object Query2 {
   def make[T](using tabular: SqlTabular[T]): Query2[T] = {
     val aliasName = s"${tabular.table}-${UUID.randomUUID()}" // will be shortened on cleanup
     val from      = FromItem.Aliased(FromItem.FromTable(tabular), aliasName)
-    Select(from, ColumnPath.make(using from.fielded))
+    makeSelect(from)
   }
 
   sealed trait FromItem[T] {
@@ -96,12 +105,25 @@ object Query2 {
 
       override def toPreSql: Sql = sql"(${query2.toPreSql})"
     }
-    // TODO:
-    // - [x] TableIdentifier irgendwie auslagern (das passt mit SqlIdentifier nicht gut, wegen dem Alias)
-    // - [x] FromItemSource für eine Tabelle oder ein Query
-    // - [x] FromItem selbst mit Source mit potentiellem Alias
-    // - [ ] Dynamisches Renaming der Resultat-Werte
-    // - [x] TupleColumnPath hat ein funktionierendes Prepend
+
+    case class InnerJoin[L, R](left: FromItem[L], right: FromItem[R], onExpression: Rep[Boolean])
+        extends FromItem[(L, R)] {
+      override def fielded: SqlFielded[(L, R)] = SqlFielded.ConcatFielded(left.fielded, right.fielded)
+
+      override def toPreSql: Sql = {
+        sql"${left.toPreSql} JOIN ${right.toPreSql} ON ${onExpression.toInterpolationParameter}"
+      }
+    }
+
+    case class LeftJoin[L, R](left: FromItem[L], right: FromItem[R], onExpression: Rep[Boolean])
+        extends FromItem[(L, Option[R])] {
+      override def fielded: SqlFielded[(L, Option[R])] =
+        SqlFielded.ConcatFielded(left.fielded, SqlFielded.OptionalSqlFielded(right.fielded))
+
+      override def toPreSql: Sql = {
+        sql"${left.toPreSql} LEFT JOIN ${right.toPreSql} ON ${onExpression.toInterpolationParameter}"
+      }
+    }
   }
 
   case class Select[T, P](from: FromItem[T], projection: ColumnPath[T, P], filters: Seq[Rep[Boolean]] = Nil)
@@ -128,25 +150,28 @@ object Query2 {
         projection = ColumnPath.concat(projection, p)
       )
     }
+
+    override def asPureFromItem: Option[FromItem[P]] = {
+      Option.when(projection.isEmpty && filters.isEmpty) {
+        from.asInstanceOf[FromItem[P]]
+      }
+    }
+
+    override def join[R](right: Query2[R])(on: (BPath, right.BPath) => Rep[Boolean]): Query2[(P, R)] = {
+      (for
+        leftPure  <- this.asPureFromItem
+        rightPure <- right.asPureFromItem
+      yield {
+        makeSelect(
+          FromItem.InnerJoin(leftPure, rightPure, on(leftPure.basePath, rightPure.basePath))
+        )
+      }).getOrElse {
+        super.join(right)(on)
+      }
+    }
   }
 
-  case class GenericJoin[L, R](left: FromItem[L], right: FromItem[R], onExpression: Rep[Boolean])
-      extends Query2[(L, R)] {
-    protected override def toPreSql: Sql =
-      sql"SELECT * FROM ${left.toPreSql} JOIN ${right.toPreSql} ON ${onExpression.toInterpolationParameter}"
-
-    override def fielded: SqlFielded[(L, R)] = SqlFielded.ConcatFielded(left.fielded, right.fielded)
-
-  }
-
-  case class GenericLeftJoin[L, R](left: Query2[L], right: Query2[R], onExpression: Rep[Boolean])
-      extends Query2[(L, Option[R])] {
-    protected override def toPreSql: Sql =
-      sql"SELECT * FROM ${left.toPreSql} LEFT JOIN ${right.toPreSql} ON ${onExpression.toInterpolationParameter}"
-
-    override def fielded: SqlFielded[(L, Option[R])] =
-      SqlFielded.ConcatFielded(left.fielded, SqlFielded.OptionalSqlFielded(right.fielded))
-  }
+  private def makeSelect[T](from: FromItem[T]): Select[T, T] = Select(from, from.basePath)
 
   private def ensureFielded[T](in: SqlColumn[T] | SqlFielded[T]): SqlFielded[T] = {
     in match {

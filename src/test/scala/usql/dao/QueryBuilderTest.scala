@@ -144,18 +144,28 @@ class QueryBuilderTest extends TestBaseWithH2 {
       .make[Person]
       .join(Query2.make[PersonPermission])(_.id === _.personId)
       .join(Query2.make[Permission])(_._2.permissionId === _.id)
-      .filter(_._1._1.age.isNotNull)
+      .filter(_._2.name === "Write")
       .map(_._1._1.name)
 
-    foo.all() shouldBe empty // TODO
+    println(s"Foo SQL ${foo.toSql}")
+    foo.all() shouldBe Seq("Alice")
 
     val foo2 = Query2
       .make[Person]
       .leftJoin(Query2.make[PersonPermission])(_.id === _.personId)
       .leftJoin(Query2.make[Permission])(_._2.permissionId === _.id)
-      .filter(_._1._1.age.isNotNull)
-      .map(_._1._1.name)
+      .map(x => (x._1._1.name, x._2.name))
 
-    foo2.all() shouldBe empty // TODO
+    println(s"Foo2 SQL ${foo2.toSql}")
+    foo2.all() should contain theSameElementsAs Seq(
+      ("Alice", Some("Read")),
+      ("Alice", Some("Write")),
+      ("Bob", Some("Read")),
+      ("Charly", None)
+    )
+  }
+
+  it should "work with conflicting column names" in {
+    pending
   }
 }
