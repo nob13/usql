@@ -53,7 +53,7 @@ trait Query2[T] {
 
 object Query2 {
   def make[T](using tabular: SqlTabular[T]): Query2[T] = {
-    val alias = Alias(s"${tabular.tableName}-${UUID.randomUUID()}", tabular)
+    val alias = Alias(s"${tabular.table}-${UUID.randomUUID()}", tabular)
     TableScan(alias, alias.col)
   }
 
@@ -65,7 +65,7 @@ object Query2 {
 
   object FromItem {
     // TODO:
-    // - TableIdentifier irgendwie auslagern (das passt mit SqlIdentifier nicht gut, wegen dem Alias)
+    // - [x] TableIdentifier irgendwie auslagern (das passt mit SqlIdentifier nicht gut, wegen dem Alias)
     // - FromItemSource für eine Tabelle oder ein Query
     // - FromItem selbst mit Source mit potentiellem Alias
     // - [x] TupleColumnPath hat ein funktionierendes Prepend

@@ -1,6 +1,6 @@
 package usql.dao
 
-import usql.SqlColumnId
+import usql.{SqlColumnId, SqlTableId}
 
 /** Maps Column / Table names. */
 trait NameMapping {
@@ -9,7 +9,7 @@ trait NameMapping {
   def columnToSql(name: String): SqlColumnId
 
   /** Converts a case class (full qualified) name to SQL. */
-  def caseClassToTableName(name: String): SqlColumnId
+  def caseClassToTableId(name: String): SqlTableId
 }
 
 object NameMapping {
@@ -19,8 +19,8 @@ object NameMapping {
 
     override def columnToSql(name: String): SqlColumnId = SqlColumnId.fromString(snakeCase(name))
 
-    override def caseClassToTableName(name: String): SqlColumnId = {
-      SqlColumnId.fromString(snakeCase(getSimpleClassName(name)))
+    override def caseClassToTableId(name: String): SqlTableId = {
+      SqlTableId.fromString(snakeCase(getSimpleClassName(name)))
     }
   }
 

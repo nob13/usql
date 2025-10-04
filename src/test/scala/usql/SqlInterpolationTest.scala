@@ -23,10 +23,10 @@ class SqlInterpolationTest extends TestBase {
       )
     )
 
-    val identifier = SqlColumnId.fromString("table1")
+    val identifier = SqlTableId.fromString("table1")
     val withSingle = sql"select * from ${identifier}"
     withSingle shouldBe Sql(
-      Seq("select * from " -> SqlInterpolationParameter.IdentifierParameter(identifier))
+      Seq("select * from " -> SqlInterpolationParameter.TableRef(identifier))
     )
     withSingle.sql shouldBe "select * from table1"
 
@@ -40,7 +40,7 @@ class SqlInterpolationTest extends TestBase {
     withIdentifiers shouldBe Sql(
       Seq(
         "select "      -> SqlInterpolationParameter.IdentifiersParameter(identifiers),
-        " from "       -> SqlInterpolationParameter.IdentifierParameter(identifier),
+        " from "       -> SqlInterpolationParameter.TableRef(identifier),
         " where id = " -> SqlInterpolationParameter.SqlParameter(2)
       )
     )

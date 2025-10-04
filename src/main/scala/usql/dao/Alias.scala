@@ -1,6 +1,6 @@
 package usql.dao
 
-import usql.{SqlColumnId, SqlRawPart}
+import usql.SqlColumnId
 
 /** Aliases a table name for use in Join Statements. */
 case class Alias[T](

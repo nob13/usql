@@ -1,13 +1,13 @@
 package usql.dao
 
 import NameMapping.Default
-import usql.SqlColumnId
+import usql.{SqlColumnId, SqlTableId}
 import usql.util.TestBase
 
 class NameMappingTest extends TestBase {
   "Default" should "work" in {
-    Default.caseClassToTableName("foo.bar.MySuperClass") shouldBe SqlColumnId.fromString("my_super_class")
-    Default.caseClassToTableName("foo.bar.User") shouldBe SqlColumnId.fromString("user")
+    Default.caseClassToTableId("foo.bar.MySuperClass") shouldBe SqlTableId.fromString("my_super_class")
+    Default.caseClassToTableId("foo.bar.User") shouldBe SqlTableId.fromString("user")
     Default.columnToSql("id") shouldBe SqlColumnId.fromString("id")
     Default.columnToSql("myData") shouldBe SqlColumnId.fromString("my_data")
 

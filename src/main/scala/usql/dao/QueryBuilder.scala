@@ -20,7 +20,7 @@ object QueryBuilder {
     case class Simple[T](tabular: SqlTabular[T]) extends From[T] {
       override def fielded: SqlFielded[T] = tabular
 
-      override def encode: Sql = sql"${tabular.tableName}"
+      override def encode: Sql = sql"${tabular.table}"
 
       def join[R](
           on: (ColumnPath[T, T], ColumnPath[R, R]) => Rep[Boolean]

@@ -1,6 +1,6 @@
 package usql.dao
 
-import usql.{DataType, RowEncoder, RowDecoder, SqlColumnId}
+import usql.{DataType, RowDecoder, RowEncoder, SqlColumnId, SqlTableId}
 
 import scala.annotation.Annotation
 import scala.compiletime.{erasedValue, summonInline}
@@ -51,16 +51,16 @@ object Macros {
   inline def buildTabular[T <: Product](using nm: NameMapping, mirror: Mirror.ProductOf[T]): SqlTabular[T] = {
     val fielded = buildFielded[T]
 
-    val tableName: SqlColumnId = tableNameAnnotation[T]
+    val tableName: SqlTableId = tableNameAnnotation[T]
       .map { tn =>
-        SqlColumnId.fromString(tn.name)
+        SqlTableId.fromString(tn.name)
       }
       .getOrElse {
-        nm.caseClassToTableName(typeName[T])
+        nm.caseClassToTableId(typeName[T])
       }
 
     SqlTabular.SimpleTabular(
-      tableName = tableName,
+      table = tableName,
       fielded = fielded,
       isOptional = false
     )

@@ -1,6 +1,6 @@
 package usql.dao
 
-import usql.{SqlColumnId, dao}
+import usql.{SqlColumnId, SqlTableId, dao}
 import usql.profiles.BasicProfile.given
 import usql.util.TestBase
 
@@ -13,7 +13,7 @@ class SqlColumnarTest extends TestBase {
   "Tabular" should "be derivable" in {
     val tabular = SqlTabular.derived[Sample]
     tabular.columns.map(_.id) shouldBe Seq(SqlColumnId.fromString("name"), SqlColumnId.fromString("age"))
-    tabular.tableName shouldBe SqlColumnId.fromString("sample")
+    tabular.table shouldBe SqlTableId.fromString("sample")
   }
 
   @TableName("samplename")
@@ -24,7 +24,7 @@ class SqlColumnarTest extends TestBase {
 
   it should "work with annotations" in {
     val tabular = SqlTabular.derived[SampleWithAnnotations]
-    tabular.tableName shouldBe SqlColumnId.fromString("samplename")
+    tabular.table shouldBe SqlTableId.fromString("samplename")
     tabular.columns.map(_.id) shouldBe Seq(SqlColumnId.fromString("my_name"), SqlColumnId.fromString("age"))
   }
 }

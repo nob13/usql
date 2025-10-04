@@ -1,14 +1,14 @@
 package usql.dao
 
-import usql.{RowEncoder, RowDecoder, SqlColumnId}
+import usql.{RowDecoder, RowEncoder, SqlColumnId, SqlTableId}
 
 import scala.deriving.Mirror
 
-/** Maps some thing to a whole table */
+/** Maps something to a whole table */
 trait SqlTabular[T] extends SqlFielded[T] {
 
   /** Name of the table. */
-  def tableName: SqlColumnId
+  def table: SqlTableId
 
   /** Alias this table to be used in joins */
   def alias(name: String): Alias[T] = Alias(name, this)
@@ -30,9 +30,9 @@ object SqlTabular {
     Macros.buildTabular[T]
 
   case class SimpleTabular[T](
-                               tableName: SqlColumnId,
-                               fielded: SqlFielded[T],
-                               isOptional: Boolean
+      table: SqlTableId,
+      fielded: SqlFielded[T],
+      isOptional: Boolean
   ) extends SqlTabular[T] {
     override def fields: Seq[Field[?]] = fielded.fields
 

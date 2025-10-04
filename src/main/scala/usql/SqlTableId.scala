@@ -26,3 +26,17 @@ case class SqlTableId(name: String, quoted: Boolean) {
 
   override def toString: String = serialize
 }
+
+object SqlTableId {
+  def fromString(s: String): SqlTableId = {
+    if s.length >= 2 && s.startsWith("\"") && s.endsWith("\"") then {
+      SqlTableId(s.drop(1).dropRight(1), true)
+    } else {
+      if SqlReservedWords.isReserved(s) then {
+        SqlTableId(s, quoted = true)
+      } else {
+        SqlTableId(s, quoted = false)
+      }
+    }
+  }
+}
