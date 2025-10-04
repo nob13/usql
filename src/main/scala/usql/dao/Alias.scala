@@ -28,5 +28,5 @@ case class Alias[T](
   }
 
   /** Aliased fielded. */
-  def fielded: SqlFielded[T] = SqlFielded.MappedSqlFielded(tabular, id => id.copy(alias = Some(aliasName)))
+  def fielded: SqlFielded[T] = tabular.withAlias(aliasName)
 }

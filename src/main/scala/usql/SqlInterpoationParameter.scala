@@ -91,24 +91,20 @@ object SqlInterpolationParameter {
     override def mapAliases(map: Map[String, String]): SqlInterpolationParameter = sql.mapAliases(map)
   }
 
-  case class TableRef(tableId: SqlTableId, alias: Option[String] = None) extends SqlInterpolationParameter {
+  case class TableIdParameter(tableId: SqlTableId) extends SqlInterpolationParameter {
     override def toSql: String = {
-      val builder = StringBuilder()
-      builder ++= tableId.serialize
-      alias.foreach { alias =>
-        builder += ' '
-        builder ++= alias
-      }
-      builder.toString()
+      tableId.serialize
     }
+  }
 
-    override def collectAliases: Set[String] = alias.toSet
+  case class AliasParameter(alias: String) extends SqlInterpolationParameter {
+    override def toSql: String = alias
 
-    override def mapAliases(map: Map[String, String]): SqlInterpolationParameter = {
-      copy(
-        alias = alias.map { a => map.getOrElse(a, a) }
-      )
-    }
+    override def collectAliases: Set[String] = Set(alias)
+
+    override def mapAliases(map: Map[String, String]): AliasParameter = AliasParameter(
+      alias = map.getOrElse(alias, alias)
+    )
   }
 
   /** Empty leaf, so that we have exactly as much interpolation parameters as string parts. */
@@ -131,11 +127,11 @@ object SqlInterpolationParameter {
     RawBlockParameter(rawPart.s)
   }
   implicit def innerSql(sql: Sql): InnerSql                                               = InnerSql(sql)
-  implicit def alias(alias: Alias[?]): TableRef                                           = TableRef(
-    tableId = alias.tabular.table,
-    alias = Some(alias.aliasName)
+  implicit def alias(alias: Alias[?]): InnerSql                                           = InnerSql(
+    sql"${alias.tabular.table} AS ${AliasParameter(alias.aliasName)}"
   )
-  implicit def tableId(tableId: SqlTableId): TableRef                                     = TableRef(tableId, None)
+
+  implicit def tableId(tableId: SqlTableId): TableIdParameter = TableIdParameter(tableId)
 
   implicit def sqlParameters[T](sqlParameters: SqlParameters[T])(using dataType: DataType[T]): InnerSql = {
     val builder = Seq.newBuilder[(String, SqlInterpolationParameter)]
@@ -148,9 +144,8 @@ object SqlInterpolationParameter {
     InnerSql(Sql(builder.result()))
   }
 
-  implicit def crd(crd: CrdBase[?]): TableRef = TableRef(
-    crd.tabular.table,
-    alias = None
+  implicit def crd(crd: CrdBase[?]): TableIdParameter = TableIdParameter(
+    crd.tabular.table
   )
 }
 

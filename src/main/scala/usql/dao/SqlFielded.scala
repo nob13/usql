@@ -59,6 +59,16 @@ trait SqlFielded[T] extends SqlColumnar[T] {
   override def optionalize: SqlFielded[Optionalize[T]] = SqlFielded
     .OptionalSqlFielded(this)
     .asInstanceOf[SqlFielded[Optionalize[T]]]
+
+  /** Set an alias. */
+  def withAlias(aliasName: String): SqlFielded[T] = {
+    SqlFielded.MappedSqlFielded(this, _.copy(alias = Some(aliasName)))
+  }
+
+  /** Drops an alias. */
+  def dropAlias: SqlFielded[T] = {
+    SqlFielded.MappedSqlFielded(this, _.copy(alias = None))
+  }
 }
 
 object SqlFielded {
@@ -79,9 +89,8 @@ object SqlFielded {
   inline def derived[T <: Product: Mirror.ProductOf](using nm: NameMapping = NameMapping.Default): SqlFielded[T] =
     Macros.buildFielded[T]
 
-  case class MappedSqlFielded[T](underlying: SqlFielded[T], mapping: SqlColumnId => SqlColumnId)
-      extends SqlFielded[T] {
-    override def fields: Seq[Field[_]] = underlying.fields.map {
+  case class MappedSqlFielded[T](underlying: SqlFielded[T], mapping: SqlColumnId => SqlColumnId) extends SqlFielded[T] {
+    override lazy val fields: Seq[Field[_]] = underlying.fields.map {
       case c: Field.Column[?] =>
         c.copy(
           column = c.column.copy(
@@ -225,10 +234,10 @@ object Field {
 
   /** A Field which maps to a nested case class */
   case class Group[T](
-                       fieldName: String,
-                       mapping: ColumnGroupMapping,
-                       columnBaseName: SqlColumnId,
-                       fielded: SqlFielded[T]
+      fieldName: String,
+      mapping: ColumnGroupMapping,
+      columnBaseName: SqlColumnId,
+      fielded: SqlFielded[T]
   ) extends Field[T] {
     override def columns: Seq[SqlColumn[?]] =
       fielded.columns.map { column =>
