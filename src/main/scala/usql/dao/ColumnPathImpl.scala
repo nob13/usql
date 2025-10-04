@@ -2,43 +2,6 @@ package usql.dao
 
 import usql.{Optionalize, SqlIdentifier}
 
-private[usql] case class ColumnPathAlias[R, T](underlying: ColumnPath[R, T], alias: String) extends ColumnPath[R, T] {
-  override def selectDynamic(name: String): ColumnPath[R, _] = {
-    copy(
-      underlying = underlying.selectDynamic(name)
-    )
-  }
-
-  override def buildGetter: R => T = {
-    underlying.buildGetter
-  }
-
-  override def structure: SqlFielded[T] | SqlColumn[T] = {
-    underlying.structure match {
-      case c: SqlColumn[T]  =>
-        aliasify(c)
-      case f: SqlFielded[T] =>
-        aliasify(f)
-    }
-    underlying.structure
-  }
-
-  private def aliasify[X](fielded: SqlFielded[X]): SqlFielded[X] = {
-    SqlFielded.MappedSqlFielded(fielded, _.copy(alias = Some(alias)))
-  }
-
-  private def aliasify[X](c: SqlColumn[X]): SqlColumn[X] = {
-    c.copy(
-      id = c.id.copy(
-        alias = Some(alias)
-      )
-    )
-  }
-
-  override def buildIdentifier: Seq[SqlIdentifier] = {
-    underlying.buildIdentifier.map(_.copy(alias = Some(alias)))
-  }
-}
 
 private[usql] case class ColumnPathStartingOpt[R, T](underlying: ColumnPath[R, T])
     extends ColumnPath[Option[R], Optionalize[T]] {

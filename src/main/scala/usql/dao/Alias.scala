@@ -24,7 +24,7 @@ case class Alias[T](
 
   /** Access to aliased cols. */
   def col: ColumnPath[T, T] = {
-    tabular.cols.withAlias(aliasName)
+    ColumnPath.make(using fielded)
   }
 
   /** Aliased fielded. */
