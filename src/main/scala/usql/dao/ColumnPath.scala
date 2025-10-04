@@ -51,19 +51,24 @@ trait ColumnPath[R, T] extends Selectable with SqlIdentifying with Rep[T] {
   /** Returns true if this is a default projection from T to T without any other things */
   private[usql] def isDefault: Boolean = false
 
+  /** Append a path. */
+  final def append[T2](columnPath: ColumnPath[T, T2]): ColumnPath[R, T2] = columnPath.prepend(this)
+
+  /** Prepend a path. */
+  def prepend[R2](columnPath: ColumnPath[R2, R]): ColumnPath[R2, T]
 }
 
 object ColumnPath {
 
   def make[T](using f: SqlFielded[T]): ColumnPath[T, T] = ColumnPathStart(f)
 
-  def makeOpt[T](using f: SqlFielded[T]): ColumnPath[Option[T], Optionalize[T]] = ColumnPathStartingOpt(
-    ColumnPathStart(f)
-  )
+  def makeOpt[T](using f: SqlFielded[T]): ColumnPath[Option[T], Option[T]] = {
+    ColumnPathStart(SqlFielded.OptionalSqlFielded(f))
+  }
 
   /** Concat two Column Paths. */
   def concat[A, B, C](first: ColumnPath[A, B], second: ColumnPath[B, C]): ColumnPath[A, C] = {
-    ColumnPathChain(first, second)
+    first.append(second)
   }
 
   implicit def fromTuple[T](in: T)(using b: BuildFromTuple[T]): ColumnPath[b.Root, b.CombinedType] =

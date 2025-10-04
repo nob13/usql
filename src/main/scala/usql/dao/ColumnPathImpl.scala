@@ -2,35 +2,6 @@ package usql.dao
 
 import usql.{Optionalize, SqlIdentifier}
 
-
-private[usql] case class ColumnPathStartingOpt[R, T](underlying: ColumnPath[R, T])
-    extends ColumnPath[Option[R], Optionalize[T]] {
-  override def selectDynamic(name: String): ColumnPath[Option[R], _] = {
-    ColumnPathStartingOpt(underlying.selectDynamic(name))
-  }
-
-  override def buildGetter: Option[R] => Optionalize[T] = {
-    val underlyingGetter = underlying.buildGetter
-    if underlying.structure.isOptional then { it =>
-      it.flatMap { r =>
-        underlyingGetter(r).asInstanceOf[Option[T]]
-      }.asInstanceOf[Optionalize[T]]
-    } else { it =>
-      it.map(underlyingGetter).asInstanceOf[Optionalize[T]]
-    }
-
-  }
-
-  override def structure: SqlFielded[Optionalize[T]] | SqlColumn[Optionalize[T]] = {
-    underlying.structure match {
-      case s: SqlFielded[T] => s.optionalize
-      case c: SqlColumn[T]  => c.optionalize
-    }
-  }
-
-  override def buildIdentifier: Seq[SqlIdentifier] = underlying.buildIdentifier
-}
-
 private[usql] abstract class ColumnPathAtFielded[R, T](
     fielded: SqlFielded[T],
     parentMapping: SqlIdentifier => SqlIdentifier
@@ -52,9 +23,9 @@ private[usql] abstract class ColumnPathAtFielded[R, T](
 
     field match {
       case c: Field.Column[X] =>
-        ColumnPathSelectColumn(c.column, childrenMapping, this, subGetter)
+        ColumnPathSelectColumn(name, c.column, childrenMapping, this, subGetter)
       case g: Field.Group[X]  =>
-        ColumnPathSelectGroup(g, childrenMapping, this, subGetter)
+        ColumnPathSelectGroup(name, g, childrenMapping, this, subGetter)
     }
   }
 
@@ -83,9 +54,14 @@ private[usql] case class ColumnPathStart[R](fielded: SqlFielded[R])
   override def buildIdentifier: Seq[SqlIdentifier] = fielded.columns.map(_.id)
 
   override def structure: SqlFielded[R] = fielded
+
+  override def prepend[R2](columnPath: ColumnPath[R2, R]): ColumnPath[R2, R] = {
+    columnPath
+  }
 }
 
 private[usql] case class ColumnPathSelectGroup[R, P, T](
+    selected: String,
     group: Field.Group[T],
     parentMapping: SqlIdentifier => SqlIdentifier,
     parent: ColumnPath[R, P],
@@ -104,9 +80,14 @@ private[usql] case class ColumnPathSelectGroup[R, P, T](
     val parentGetter = parent.buildGetter
     root => subGetter(parentGetter(root))
   }
+
+  override def prepend[R2](columnPath: ColumnPath[R2, R]): ColumnPath[R2, T] = {
+    parent.prepend(columnPath).selectDynamic(selected).asInstanceOf[ColumnPath[R2, T]]
+  }
 }
 
 private[usql] case class ColumnPathSelectColumn[R, P, T](
+    selected: String,
     column: SqlColumn[T],
     mapping: SqlIdentifier => SqlIdentifier,
     parent: ColumnPath[R, P],
@@ -129,6 +110,10 @@ private[usql] case class ColumnPathSelectColumn[R, P, T](
 
   override def buildIdentifier: Seq[SqlIdentifier] = {
     Seq(mapping(column.id))
+  }
+
+  override def prepend[R2](columnPath: ColumnPath[R2, R]): ColumnPath[R2, T] = {
+    parent.prepend(columnPath).selectDynamic(selected).asInstanceOf[ColumnPath[R2, T]]
   }
 }
 
@@ -161,36 +146,15 @@ private[usql] case class ColumnPathOptionalize[R, T](underlying: ColumnPath[R, T
   override def buildIdentifier: Seq[SqlIdentifier] = {
     underlying.buildIdentifier
   }
+
+  override def prepend[R2](columnPath: ColumnPath[R2, R]): ColumnPath[R2, Optionalize[T]] = {
+    ColumnPathOptionalize(underlying.prepend(columnPath))
+  }
 }
 
 private[usql] object ColumnPathOptionalize {
   def make[R, T](underlying: ColumnPath[R, T]): ColumnPathOptionalize[R, T] = underlying match {
     case c: ColumnPathOptionalize[R, ?] => c.asInstanceOf[ColumnPathOptionalize[R, T]]
     case otherwise                      => ColumnPathOptionalize(otherwise)
-  }
-}
-
-private[usql] case class ColumnPathChain[A, B, C](
-    first: ColumnPath[A, B],
-    second: ColumnPath[B, C]
-) extends ColumnPath[A, C] {
-  override def selectDynamic(name: String): ColumnPath[A, _] = {
-    copy(
-      second = second.selectDynamic(name)
-    )
-  }
-
-  override def buildGetter: A => C = {
-    val firstGetter  = first.buildGetter
-    val secondGetter = second.buildGetter
-    in => secondGetter(firstGetter(in))
-  }
-
-  override def structure: SqlFielded[C] | SqlColumn[C] = {
-    second.structure
-  }
-
-  override def buildIdentifier: Seq[SqlIdentifier] = {
-    second.buildIdentifier
   }
 }

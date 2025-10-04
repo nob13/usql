@@ -136,4 +136,24 @@ class ColumnPathTest extends TestBase {
     )
     pair.structure.asInstanceOf[SqlFielded[(Int, Int)]].fields.map(_.fieldName) shouldBe Seq("_1", "_2")
   }
+
+  "concat" should "work" in {
+    val first     = ColumnPath.make[Sample].sub.sub2
+    val second    = ColumnPath.make[SubSubElement].foo
+    val concatted = ColumnPath.concat(first, second)
+    concatted.structure.columns shouldBe Seq(
+      SqlColumn(SqlIdentifier.fromString("sub2_foo"), DataType.get[Boolean])
+    )
+  }
+
+  it should "work for optionalized values" in {
+    val first     = ColumnPath.makeOpt[Sample].sub.sub2
+    val second    = ColumnPath.makeOpt[SubSubElement].foo
+    val concatted = ColumnPath.concat(first, second)
+    concatted.structure.columns shouldBe Seq(
+      SqlColumn(SqlIdentifier.fromString("sub2_foo"), DataType.get[Option[Boolean]])
+    )
+    concatted.buildGetter(None) shouldBe None
+    concatted.buildGetter(Some(sample)) shouldBe Some(sample.sub.sub2.foo)
+  }
 }

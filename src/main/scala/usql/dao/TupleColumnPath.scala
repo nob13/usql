@@ -6,6 +6,8 @@ sealed trait TupleColumnPath[R, T <: Tuple] extends ColumnPath[R, T] {
   final override def structure: SqlFielded[T] = structureAt(1)
 
   def structureAt(tupleIdx: Int): SqlFielded[T]
+
+  override def prepend[R2](columnPath: ColumnPath[R2, R]): TupleColumnPath[R2, T]
 }
 
 object TupleColumnPath {
@@ -21,6 +23,10 @@ object TupleColumnPath {
     override def buildIdentifier: Seq[SqlIdentifier] = Nil
 
     override def structureAt(tupleIdx: Int): SqlFielded[EmptyTuple] = emptyStructure
+
+    override def prepend[R2](columnPath: ColumnPath[R2, R]): TupleColumnPath[R2, EmptyTuple] = {
+      Empty[R2]()
+    }
   }
 
   private val emptyStructure: SqlFielded[EmptyTuple] = SqlFielded.SimpleSqlFielded(
@@ -28,7 +34,7 @@ object TupleColumnPath {
     _ => Nil,
     _ => EmptyTuple
   )
-  
+
   case class Rec[R, H, T <: Tuple](head: ColumnPath[R, H], tail: TupleColumnPath[R, T])
       extends TupleColumnPath[R, H *: T] {
     override def selectDynamic(name: String): ColumnPath[R, _] = {
@@ -78,6 +84,13 @@ object TupleColumnPath {
             f
           )
       }
+    }
+
+    override def prepend[R2](columnPath: ColumnPath[R2, R]): TupleColumnPath[R2, H *: T] = {
+      Rec(
+        head = head.prepend(columnPath),
+        tail = tail.prepend(columnPath)
+      )
     }
   }
 }

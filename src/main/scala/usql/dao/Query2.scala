@@ -57,6 +57,20 @@ object Query2 {
     TableScan(alias, alias.col)
   }
 
+  sealed trait FromItem[T] {
+    def fielded: SqlFielded[T]
+
+    def toPreSql: Sql
+  }
+
+  object FromItem {
+    // TODO:
+    // - TableIdentifier irgendwie auslagern (das passt mit SqlIdentifier nicht gut, wegen dem Alias)
+    // - FromItemSource für eine Tabelle oder ein Query
+    // - FromItem selbst mit Source mit potentiellem Alias
+    // - [x] TupleColumnPath hat ein funktionierendes Prepend
+  }
+
   case class TableScan[T, P](alias: Alias[T], projection: ColumnPath[T, P], filters: Seq[Rep[Boolean]] = Nil)
       extends Query2[P] {
     protected override def toPreSql: Sql = {
