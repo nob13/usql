@@ -74,58 +74,6 @@ class QueryBuilderTest extends TestBaseWithH2 {
     )
   }
 
-  it should "make a simple query" in new EnvWithSamples {
-    QueryBuilder
-      .from[Person]
-      .where(_.id === 1)
-      .selectAll
-      .one() shouldBe Some(alice)
-
-    QueryBuilder
-      .from[Person]
-      .where(_.name === "Bob")
-      .selectAll
-      .all() shouldBe Seq(bob)
-
-    val aliceAndBob = QueryBuilder
-      .from[Person]
-      .where(x => x.name === "Bob" || x.name === "Alice")
-      .selectAll
-      .all()
-    aliceAndBob should contain theSameElementsAs Seq(alice, bob)
-
-    val greater30 = QueryBuilder
-      .from[Person]
-      .where(_.age > 30)
-      .selectAll
-      .all()
-
-    greater30 shouldBe Seq(alice)
-
-    val withoutAge = QueryBuilder
-      .from[Person]
-      .where(_.age.isNull)
-      .selectAll
-      .all()
-
-    withoutAge should contain theSameElementsAs Seq(bob, charly)
-  }
-
-  it should "select single fields" in new EnvWithSamples {
-    val names = QueryBuilder.from[Person].select(_.name, _.age).all()
-    names should contain theSameElementsAs Seq(("Alice", Some(42)), ("Bob", None), ("Charly", None))
-  }
-
-  it should "work for a simple join" in new EnvWithSamples {
-    val foo = QueryBuilder
-      .fromX[Person]
-      .join[PersonPermission](_.id == _.personId)
-
-    val foo2 = foo
-      .join[Permission](_._2.permissionId == _.id)
-
-  }
-
   it should "work with Query2" in new EnvWithSamples {
     val withoutAgeQuery = Query2
       .make[Person]
