@@ -78,8 +78,6 @@ class QueryBuilderTest extends TestBaseWithH2 {
       .filter(_.age.isNull)
       .map(x => (x.id, x.name))
 
-    println(s"SQL = ${withoutAgeQuery.sql}")
-
     val withoutAge = withoutAgeQuery.all()
 
     withoutAge should contain theSameElementsAs Seq(2 -> "Bob", 3 -> "Charly")
@@ -92,7 +90,6 @@ class QueryBuilderTest extends TestBaseWithH2 {
       .filter(_._2.name === "Write")
       .map(_._1._1.name)
 
-    println(s"Foo SQL ${foo.sql}")
     foo.all() shouldBe Seq("Alice")
 
     val foo2 = Person.query
@@ -100,7 +97,6 @@ class QueryBuilderTest extends TestBaseWithH2 {
       .leftJoin(Permission.query)(_._2.permissionId === _.id)
       .map(x => (x._1._1.name, x._2.name))
 
-    println(s"Foo2 SQL ${foo2.sql}")
     foo2.all() should contain theSameElementsAs Seq(
       ("Alice", Some("Read")),
       ("Alice", Some("Write")),
@@ -135,7 +131,6 @@ class QueryBuilderTest extends TestBaseWithH2 {
     val persons = Person.query
       .map(p => (p.id, p.id))
 
-    println(persons.all())
     persons.fielded.columns.distinct shouldBe Seq(
       SqlColumn("id", DataType.get[Int]),
       SqlColumn("id0", DataType.get[Int])
