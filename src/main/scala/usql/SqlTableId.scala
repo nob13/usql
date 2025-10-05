@@ -14,14 +14,18 @@ case class SqlTableId(name: String, quoted: Boolean) {
   /** Serialize the identifier. */
   def serialize: String = {
     val sb = StringBuilder()
-    if quoted then {
-      sb += '"'
-    }
-    sb ++= name
-    if quoted then {
-      sb += '"'
-    }
+    serializeSql(sb)
     sb.result()
+  }
+
+  def serializeSql(s: StringBuilder): Unit = {
+    if quoted then {
+      s += '"'
+    }
+    s ++= name
+    if quoted then {
+      s += '"'
+    }
   }
 
   override def toString: String = serialize

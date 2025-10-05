@@ -21,18 +21,22 @@ case class SqlColumnId(name: String, quoted: Boolean, alias: Option[String] = No
   /** Serialize the identifier. */
   def serialize: String = {
     val sb = StringBuilder()
-    alias.foreach { alias =>
-      sb ++= alias
-      sb += '.'
-    }
-    if quoted then {
-      sb += '"'
-    }
-    sb ++= name
-    if quoted then {
-      sb += '"'
-    }
+    serializeSql(sb)
     sb.result()
+  }
+
+  def serializeSql(s: StringBuilder): Unit = {
+    alias.foreach { alias =>
+      s ++= alias
+      s += '.'
+    }
+    if quoted then {
+      s += '"'
+    }
+    s ++= name
+    if quoted then {
+      s += '"'
+    }
   }
 
   /** Placeholder for select query */

@@ -8,7 +8,13 @@ import scala.language.implicitConversions
 sealed trait SqlInterpolationParameter {
 
   /** Converts to SQL or to replacement character. */
-  def toSql: String
+  final def toSql: String = {
+    val s = StringBuilder()
+    serializeSql(s)
+    s.toString()
+  }
+
+  def serializeSql(s: StringBuilder): Unit
 
   /** Collect all used aliases. */
   def collectAliases: Set[String] = Set.empty
@@ -32,7 +38,7 @@ object SqlInterpolationParameter {
       value.hashCode()
     }
 
-    override def toSql: String = "?"
+    override def serializeSql(s: StringBuilder): Unit = s += '?'
 
     override def toString: String = {
       s"SqlParameter(${value} of type ${dataType.jdbcType.getName})"
@@ -44,14 +50,14 @@ object SqlInterpolationParameter {
   }
 
   /** A single identifier. */
-  case class ColumnIdParameter(i: SqlColumnId) extends SqlInterpolationParameter {
-    override def toSql: String = i.serialize
+  case class ColumnIdParameter(columnId: SqlColumnId) extends SqlInterpolationParameter {
+    override def serializeSql(s: StringBuilder): Unit = columnId.serializeSql(s)
 
-    override def collectAliases: Set[String] = i.alias.toSet
+    override def collectAliases: Set[String] = columnId.alias.toSet
 
     override def mapAliases(map: Map[String, String]): SqlInterpolationParameter = copy(
-      i.copy(
-        alias = i.alias.map { alias =>
+      columnId.copy(
+        alias = columnId.alias.map { alias =>
           map.getOrElse(alias, alias)
         }
       )
@@ -59,15 +65,22 @@ object SqlInterpolationParameter {
   }
 
   /** Multiple identifiers. */
-  case class IdentifiersParameter(i: Seq[SqlColumnId]) extends SqlInterpolationParameter {
-    override def toSql: String = {
-      i.iterator.map(_.serialize).mkString(",")
+  case class IdentifiersParameter(columnId: Seq[SqlColumnId]) extends SqlInterpolationParameter {
+    override def serializeSql(s: StringBuilder): Unit = {
+      if columnId.isEmpty then {
+        return
+      }
+      columnId.head.serializeSql(s)
+      columnId.tail.foreach { x =>
+        s += ','
+        x.serializeSql(s)
+      }
     }
 
-    override def collectAliases: Set[String] = i.flatMap(_.alias).toSet
+    override def collectAliases: Set[String] = columnId.flatMap(_.alias).toSet
 
     override def mapAliases(map: Map[String, String]): SqlInterpolationParameter = {
-      i.map { id =>
+      columnId.map { id =>
         id.copy(
           alias = id.alias.map { alias =>
             map.getOrElse(alias, alias)
@@ -78,13 +91,14 @@ object SqlInterpolationParameter {
   }
 
   /** Some unchecked raw block. */
-  case class RawBlockParameter(s: String) extends SqlInterpolationParameter {
-    override def toSql: String = s
+  case class RawBlockParameter(param: String) extends SqlInterpolationParameter {
+    override def serializeSql(s: StringBuilder): Unit = {
+      s ++= param
+    }
   }
 
   case class InnerSql(sql: Sql) extends SqlInterpolationParameter {
-    // Not used
-    override def toSql: String = sql.sql
+    override def serializeSql(s: StringBuilder): Unit = {}
 
     override def collectAliases: Set[String] = sql.collectAliases
 
@@ -92,13 +106,15 @@ object SqlInterpolationParameter {
   }
 
   case class TableIdParameter(tableId: SqlTableId) extends SqlInterpolationParameter {
-    override def toSql: String = {
-      tableId.serialize
+    override def serializeSql(s: StringBuilder): Unit = {
+      tableId.serializeSql(s)
     }
   }
 
   case class AliasParameter(alias: String) extends SqlInterpolationParameter {
-    override def toSql: String = alias
+    override def serializeSql(s: StringBuilder): Unit = {
+      s ++= alias
+    }
 
     override def collectAliases: Set[String] = Set(alias)
 
@@ -109,7 +125,7 @@ object SqlInterpolationParameter {
 
   /** Empty leaf, so that we have exactly as much interpolation parameters as string parts. */
   object Empty extends SqlInterpolationParameter {
-    override def toSql: String = ""
+    override def serializeSql(s: StringBuilder): Unit = {}
   }
 
   implicit def toSqlParameter[T](value: T)(using dataType: DataType[T]): SqlParameter[T] = {

@@ -59,9 +59,18 @@ extension (sc: StringContext) {
 case class Sql(parts: Seq[(String, SqlInterpolationParameter)]) extends SqlBase {
 
   /** Converts to SQL Text. */
-  def sql: String = parts.view.map { case (part, param) =>
-    part + param.toSql
-  }.mkString
+  def sql: String = {
+    val s = StringBuilder()
+    serializeSql(s)
+    s.result()
+  }
+
+  def serializeSql(s: StringBuilder): Unit = {
+    parts.foreach { case (part, param) =>
+      s ++= part
+      param.serializeSql(s)
+    }
+  }
 
   override def toString: String = sql
 
