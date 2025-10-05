@@ -4,8 +4,8 @@ import usql.{DataType, Optionalize, RowDecoder, RowEncoder, SqlColumnId, SqlRawP
 
 /** A Single Column */
 case class SqlColumn[T](
-                         id: SqlColumnId,
-                         dataType: DataType[T]
+    id: SqlColumnId,
+    dataType: DataType[T]
 ) extends SqlColumnar[T] {
   override def columns: Seq[SqlColumn[_]] = List(this)
 

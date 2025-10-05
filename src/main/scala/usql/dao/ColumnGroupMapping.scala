@@ -25,8 +25,7 @@ object ColumnGroupMapping {
   }
 
   /** Maps identifiers to something else. */
-  case class Mapped(underlying: ColumnGroupMapping, mapping: SqlColumnId => SqlColumnId)
-      extends ColumnGroupMapping {
+  case class Mapped(underlying: ColumnGroupMapping, mapping: SqlColumnId => SqlColumnId) extends ColumnGroupMapping {
     override def map(columnBaseName: SqlColumnId, childId: SqlColumnId): SqlColumnId = {
       mapping(underlying.map(columnBaseName, childId))
     }

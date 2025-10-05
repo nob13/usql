@@ -63,11 +63,11 @@ private[usql] case class ColumnPathStart[R](fielded: SqlFielded[R])
 }
 
 private[usql] case class ColumnPathSelectGroup[R, P, T](
-                                                         selected: String,
-                                                         group: Field.Group[T],
-                                                         parentMapping: SqlColumnId => SqlColumnId,
-                                                         parent: ColumnPath[R, P],
-                                                         subGetter: P => T
+    selected: String,
+    group: Field.Group[T],
+    parentMapping: SqlColumnId => SqlColumnId,
+    parent: ColumnPath[R, P],
+    subGetter: P => T
 ) extends ColumnPathAtFielded[R, T](group.fielded, parentMapping) {
 
   override def columnIds: Seq[SqlColumnId] = {
@@ -89,11 +89,11 @@ private[usql] case class ColumnPathSelectGroup[R, P, T](
 }
 
 private[usql] case class ColumnPathSelectColumn[R, P, T](
-                                                          selected: String,
-                                                          column: SqlColumn[T],
-                                                          mapping: SqlColumnId => SqlColumnId,
-                                                          parent: ColumnPath[R, P],
-                                                          subGetter: P => T
+    selected: String,
+    column: SqlColumn[T],
+    mapping: SqlColumnId => SqlColumnId,
+    parent: ColumnPath[R, P],
+    subGetter: P => T
 ) extends ColumnPath[R, T] {
   override def selectDynamic(name: String): ColumnPath[R, _] = {
     throw new IllegalStateException(s"Can walk further column")
