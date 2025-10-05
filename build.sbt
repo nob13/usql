@@ -11,7 +11,7 @@ val versionTag = gitTag
   .filter(_.startsWith("v"))
   .map(_.stripPrefix("v"))
 
-val snapshotVersion = "0.3-SNAPSHOT"
+val snapshotVersion = "0.4-SNAPSHOT"
 val artefactVersion = versionTag.getOrElse(snapshotVersion)
 
 ThisBuild / scalacOptions ++= Seq("-feature")
