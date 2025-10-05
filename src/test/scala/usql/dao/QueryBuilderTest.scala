@@ -165,20 +165,25 @@ class QueryBuilderTest extends TestBaseWithH2 {
     )
   }
 
-  it should "work with conflicting column names" in {
+  it should "work with conflicting column names" in new EnvWithSamples {
     val persons = Query2
       .make[Person]
       .map(p => (p.id, p.name))
+
+    persons.all() shouldBe Seq(
+      1 -> "Alice",
+      2 -> "Bob",
+      3 -> "Charly"
+    )
 
     val permissions = Query2
       .make[Permission]
       .join(Query2.make[PersonPermission])(_.id === _.permissionId)
       .map(x => (x._1.name, x._2.personId))
 
-    val joinedAgain         = persons.join(permissions)((person, permission) => person._1 === permission._2)
-    val personAndPermission = joinedAgain.map(x => (x._1._2, x._2._2))
-
-    println(s"SQL= ${personAndPermission.toSql}")
+    val joinedAgain: Query2[((Int, String), (String, Int))] =
+      persons.join(permissions)((person, permission) => person._1 === permission._2)
+    val personAndPermission                                 = joinedAgain.map(x => (x._1._2, x._2._1))
 
     val expected = Seq(("Alice", "Read"), ("Alice", "Write"), ("Bob", "Read"))
     personAndPermission.all() should contain theSameElementsAs expected
