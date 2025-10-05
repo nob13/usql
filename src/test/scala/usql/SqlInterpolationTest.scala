@@ -39,7 +39,9 @@ class SqlInterpolationTest extends TestBase {
     val withIdentifiers = sql"select ${identifiers} from ${identifier} where id = ${2}"
     withIdentifiers shouldBe Sql(
       Seq(
-        "select "      -> SqlInterpolationParameter.IdentifiersParameter(identifiers),
+        "select "      -> SqlInterpolationParameter.MultipleSeparated(
+          identifiers.map(SqlInterpolationParameter.ColumnIdParameter.apply)
+        ),
         " from "       -> SqlInterpolationParameter.TableIdParameter(identifier),
         " where id = " -> SqlInterpolationParameter.SqlParameter(2)
       )

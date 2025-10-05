@@ -2,7 +2,7 @@ package usql.dao
 
 import usql.util.TestBaseWithH2
 import usql.profiles.PostgresProfile.*
-import usql.sql
+import usql.{DataType, sql}
 
 class QueryBuilderTest extends TestBaseWithH2 {
   override protected def baseSql: String =
@@ -165,7 +165,7 @@ class QueryBuilderTest extends TestBaseWithH2 {
     )
   }
 
-  it should "work with conflicting column names" in new EnvWithSamples {
+  it should "work in a sub select case" in new EnvWithSamples {
     val persons = Query2
       .make[Person]
       .map(p => (p.id, p.name))
@@ -187,5 +187,17 @@ class QueryBuilderTest extends TestBaseWithH2 {
 
     val expected = Seq(("Alice", "Read"), ("Alice", "Write"), ("Bob", "Read"))
     personAndPermission.all() should contain theSameElementsAs expected
+  }
+
+  it should "work with conflicting ids" in new EnvWithSamples {
+    val persons = Query2
+      .make[Person]
+      .map(p => (p.id, p.id))
+
+    println(persons.all())
+    persons.fielded.columns.distinct shouldBe Seq(
+      SqlColumn("id", DataType.get[Int]),
+      SqlColumn("id0", DataType.get[Int])
+    )
   }
 }

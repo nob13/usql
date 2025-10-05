@@ -3,6 +3,8 @@ package usql.dao
 import usql.{Optionalize, RowDecoder, RowEncoder, SqlColumnId}
 
 import java.sql.{PreparedStatement, ResultSet}
+import java.util.UUID
+import scala.collection.mutable
 import scala.deriving.Mirror
 
 /** Something which has fields (e.g. a case class) */
@@ -68,6 +70,38 @@ trait SqlFielded[T] extends SqlColumnar[T] {
   /** Drops an alias. */
   def dropAlias: SqlFielded[T] = {
     SqlFielded.MappedSqlFielded(this, _.copy(alias = None))
+  }
+
+  /**
+   * Renames columns, so that all column ids are unique
+   * @param keepAlias
+   *   if true, keep the alias names.
+   */
+  def ensureUniqueColumnIds(keepAlias: Boolean): SqlFielded[T] = {
+    val columnIds       = columns.map(_.id)
+    val inUse           = mutable.Set[SqlColumnId]()
+    val resultColumnIds = Seq.newBuilder[SqlColumnId]
+    columnIds.foreach { columnId =>
+      val baseId  = if keepAlias then {
+        columnId
+      } else {
+        columnId.copy(alias = None)
+      }
+      val idToUse = if inUse.contains(baseId) then {
+        (for
+          idx      <- (0 until 32).view
+          candidate = baseId.copy(name = baseId.name + idx)
+          if !inUse.contains(candidate)
+        yield candidate).headOption.getOrElse {
+          baseId.copy(name = baseId.name + UUID.randomUUID())
+        }
+      } else {
+        baseId
+      }
+      inUse += idToUse
+      resultColumnIds += idToUse
+    }
+    SqlFielded.WithColumnsRenamed(this, resultColumnIds.result())
   }
 }
 
@@ -195,6 +229,35 @@ object SqlFielded {
     override def isOptional: Boolean = {
       false
     }
+  }
+
+  case class WithColumnsRenamed[T](base: SqlFielded[T], columnIds: Seq[SqlColumnId]) extends SqlFielded[T] {
+    override lazy val fields: Seq[Field[_]] = {
+      var remainingColumns = columnIds
+      val result           = Seq.newBuilder[Field[?]]
+      base.fields.foreach {
+        case g: Field.Group[?]  =>
+          val (fieldColumns, newRemainingColumns) = remainingColumns.splitAt(g.fielded.cardinality)
+          result += g.copy(
+            fielded = WithColumnsRenamed(g.fielded, fieldColumns)
+          )
+          remainingColumns = newRemainingColumns
+        case c: Field.Column[?] =>
+          result += c.copy(
+            column = c.column.copy(
+              id = remainingColumns.head
+            )
+          )
+          remainingColumns = remainingColumns.tail
+      }
+      result.result()
+    }
+
+    override protected[dao] def split(value: T): Seq[Any] = base.split(value)
+
+    override protected[dao] def build(fieldValues: Seq[Any]): T = base.build(fieldValues)
+
+    override def isOptional: Boolean = base.isOptional
   }
 }
 

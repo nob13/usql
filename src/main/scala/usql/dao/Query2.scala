@@ -9,7 +9,8 @@ trait Query2[T] {
 
   final type BPath = ColumnPath[T, T]
 
-  protected def basePath: BPath = ColumnPath.make[T](using fielded)
+  /** Returns the base path fore mapping operations. */
+  protected def basePath: BPath
 
   /** Convert this Query to SQL. */
   final def toSql: Sql = toPreSql.simplifyAliases
@@ -17,7 +18,7 @@ trait Query2[T] {
   /** Convert this query to SQL (before End-Optimizations) */
   protected def toPreSql: Sql
 
-  /** Tabular representation of this. */
+  /** Tabular representation of the result. */
   def fielded: SqlFielded[T]
 
   /** Map one element. */
@@ -133,10 +134,27 @@ object Query2 {
       } else {
         sql" WHERE ${filters.reduce(_ && _).toInterpolationParameter}"
       }
-      sql"SELECT ${projection.toInterpolationParameter} FROM ${from.toPreSql} ${maybeFilterSql}"
+      val projectionString                          = SqlInterpolationParameter.MultipleSeparated(
+        projection.columnIds.zip(fielded.columns.map(_.id)).map { case (p, as) =>
+          sql"${p} AS ${as}"
+        }
+      )
+      sql"SELECT ${projectionString} FROM ${from.toPreSql} ${maybeFilterSql}"
     }
 
-    lazy val fielded: SqlFielded[P] = Query2.ensureFielded(projection.structure)
+    /** The fielded representation from the outside. */
+    lazy val fielded: SqlFielded[P] = {
+      innerFielded.ensureUniqueColumnIds(keepAlias = false)
+    }
+
+    /** The fielded representation inside (using aliases) */
+    lazy val innerFielded: SqlFielded[P] = {
+      Query2.ensureFielded(projection.structure)
+    }
+
+    override protected def basePath: BPath = {
+      ColumnPath.make[P](using innerFielded)
+    }
 
     override def filter(f: BPath => Rep[Boolean]): Select[T, P] = {
       copy(

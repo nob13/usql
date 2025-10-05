@@ -64,29 +64,25 @@ object SqlInterpolationParameter {
     )
   }
 
-  /** Multiple identifiers. */
-  case class IdentifiersParameter(columnId: Seq[SqlColumnId]) extends SqlInterpolationParameter {
+  case class MultipleSeparated(underlying: Seq[SqlInterpolationParameter], separator: String = ",")
+      extends SqlInterpolationParameter {
     override def serializeSql(s: StringBuilder): Unit = {
-      if columnId.isEmpty then {
+      if underlying.isEmpty then {
         return
       }
-      columnId.head.serializeSql(s)
-      columnId.tail.foreach { x =>
-        s += ','
+      underlying.head.serializeSql(s)
+      underlying.tail.foreach { x =>
+        s ++= separator
         x.serializeSql(s)
       }
     }
 
-    override def collectAliases: Set[String] = columnId.flatMap(_.alias).toSet
+    override def collectAliases: Set[String] = underlying.toSet.flatMap(_.collectAliases)
 
     override def mapAliases(map: Map[String, String]): SqlInterpolationParameter = {
-      columnId.map { id =>
-        id.copy(
-          alias = id.alias.map { alias =>
-            map.getOrElse(alias, alias)
-          }
-        )
-      }
+      copy(
+        underlying = underlying.map(_.mapAliases(map))
+      )
     }
   }
 
@@ -98,7 +94,9 @@ object SqlInterpolationParameter {
   }
 
   case class InnerSql(sql: Sql) extends SqlInterpolationParameter {
-    override def serializeSql(s: StringBuilder): Unit = {}
+    override def serializeSql(s: StringBuilder): Unit = {
+      sql.serializeSql(s)
+    }
 
     override def collectAliases: Set[String] = sql.collectAliases
 
@@ -132,18 +130,18 @@ object SqlInterpolationParameter {
     new SqlParameter(value, dataType)
   }
 
-  implicit def toIdentifierParameter(i: SqlColumnIdentifying): IdentifiersParameter       = IdentifiersParameter(
-    i.columnIds
+  implicit def toIdentifierParameter(i: SqlColumnIdentifying): MultipleSeparated       = MultipleSeparated(
+    i.columnIds.map(ColumnIdParameter.apply)
   )
-  implicit def toIdentifiersParameter(i: Seq[SqlColumnIdentifying]): IdentifiersParameter = IdentifiersParameter(
-    i.flatMap(_.columnIds)
+  implicit def toIdentifiersParameter(i: Seq[SqlColumnIdentifying]): MultipleSeparated = MultipleSeparated(
+    i.flatMap(_.columnIds).map(ColumnIdParameter.apply)
   )
-  implicit def columnsParameter(c: Seq[SqlColumn[?]]): IdentifiersParameter               = IdentifiersParameter(c.map(_.id))
-  implicit def rawBlockParameter(rawPart: SqlRawPart): RawBlockParameter                  = {
+  implicit def columnsParameter(c: Seq[SqlColumn[?]]): MultipleSeparated               = toIdentifiersParameter(c.map(_.id))
+  implicit def rawBlockParameter(rawPart: SqlRawPart): RawBlockParameter               = {
     RawBlockParameter(rawPart.s)
   }
-  implicit def innerSql(sql: Sql): InnerSql                                               = InnerSql(sql)
-  implicit def alias(alias: Alias[?]): InnerSql                                           = InnerSql(
+  implicit def innerSql(sql: Sql): InnerSql                                            = InnerSql(sql)
+  implicit def alias(alias: Alias[?]): InnerSql                                        = InnerSql(
     sql"${alias.tabular.table} AS ${AliasParameter(alias.aliasName)}"
   )
 
