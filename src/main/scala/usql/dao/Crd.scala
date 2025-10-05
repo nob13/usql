@@ -66,6 +66,9 @@ abstract class CrdBase[T] extends Crd[T] {
   /** Gives access to the columns */
   def cols: ColumnPath[T, T] = tabular.cols
 
+  /** Start using within query builder. */
+  def query: QueryBuilder[T] = QueryBuilder.make(using tabular)
+
   private lazy val insertStatement = {
     val placeholders = SqlRawPart(tabular.columns.map(_.id.placeholder.s).mkString(","))
     sql"INSERT INTO ${tabular.table} (${tabular.columns}) VALUES ($placeholders)"
@@ -90,7 +93,7 @@ abstract class CrdBase[T] extends Crd[T] {
 
   override def countAll()(using ConnectionProvider): Int = {
     import usql.profiles.BasicProfile.intType
-    countAllStatement.query.one[Int]().getOrElse(0)
+    countAllStatement.query[Int].one().getOrElse(0)
   }
 
   private lazy val deleteAllStatement = sql"DELETE FROM ${tabular.table}"

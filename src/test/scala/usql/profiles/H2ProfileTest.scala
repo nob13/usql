@@ -49,7 +49,7 @@ class H2ProfileTest extends TestBaseWithH2 {
       given dt: DataType[T] = example.dataType
       sql"INSERT INTO foo (id, x) VALUES (1, ${example.value})".execute()
 
-      val all = sql"SELECT id, x FROM foo".query.all[(Int, T)]()
+      val all = sql"SELECT id, x FROM foo".queryAll[(Int, T)]()
       all shouldBe Seq((1, example.value))
     }
 
@@ -63,7 +63,7 @@ class H2ProfileTest extends TestBaseWithH2 {
       sql"INSERT INTO foo (id, x) VALUES (1, ${Some(example.value): Option[T]})".execute()
       sql"INSERT INTO foo (id, x) VALUES (2, ${None: Option[T]})".execute()
 
-      val all = sql"SELECT id, x FROM foo".query.all[(Int, Option[T])]()
+      val all = sql"SELECT id, x FROM foo".queryAll[(Int, Option[T])]()
       all should contain theSameElementsAs Seq(
         (1, Some(example.value)),
         (2, None)

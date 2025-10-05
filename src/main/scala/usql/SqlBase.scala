@@ -11,7 +11,13 @@ trait SqlBase {
   )(using cp: ConnectionProvider, prep: StatementPreparator = StatementPreparator.default): T
 
   /** Turns into a query */
-  def query: Query = Query(this)
+  def query[T](using rowDecoder: RowDecoder[T]): Query[T] = Query.Simple(this, rowDecoder)
+
+  /** Shortcut for query all. */
+  def queryAll[T]()(using rowDecoder: RowDecoder[T], cp: ConnectionProvider): Vector[T] = query[T].all()
+
+  /** Shortcut for query one. */
+  def queryOne[T]()(using rowDecoder: RowDecoder[T], cp: ConnectionProvider): Option[T] = query[T].one()
 
   /** Turns into an update. */
   def update: Update = {

@@ -1,8 +1,7 @@
 package usql.dao
 
 import usql.util.TestBaseWithH2
-import usql.profiles.PostgresProfile.*
-import usql.{DataType, sql}
+import usql.DataType
 
 class QueryBuilderTest extends TestBaseWithH2 {
   override protected def baseSql: String =
@@ -74,37 +73,34 @@ class QueryBuilderTest extends TestBaseWithH2 {
     )
   }
 
-  it should "work with Query2" in new EnvWithSamples {
-    val withoutAgeQuery = Query2
-      .make[Person]
+  it should "work" in new EnvWithSamples {
+    val withoutAgeQuery = Person.query
       .filter(_.age.isNull)
       .map(x => (x.id, x.name))
 
-    println(s"SQL = ${withoutAgeQuery.toSql}")
+    println(s"SQL = ${withoutAgeQuery.sql}")
 
     val withoutAge = withoutAgeQuery.all()
 
     withoutAge should contain theSameElementsAs Seq(2 -> "Bob", 3 -> "Charly")
   }
 
-  it should "join with Query2" in new EnvWithSamples {
-    val foo = Query2
-      .make[Person]
-      .join(Query2.make[PersonPermission])(_.id === _.personId)
-      .join(Query2.make[Permission])(_._2.permissionId === _.id)
+  it should "with simple joins" in new EnvWithSamples {
+    val foo = Person.query
+      .join(PersonPermission.query)(_.id === _.personId)
+      .join(Permission.query)(_._2.permissionId === _.id)
       .filter(_._2.name === "Write")
       .map(_._1._1.name)
 
-    println(s"Foo SQL ${foo.toSql}")
+    println(s"Foo SQL ${foo.sql}")
     foo.all() shouldBe Seq("Alice")
 
-    val foo2 = Query2
-      .make[Person]
-      .leftJoin(Query2.make[PersonPermission])(_.id === _.personId)
-      .leftJoin(Query2.make[Permission])(_._2.permissionId === _.id)
+    val foo2 = Person.query
+      .leftJoin(PersonPermission.query)(_.id === _.personId)
+      .leftJoin(Permission.query)(_._2.permissionId === _.id)
       .map(x => (x._1._1.name, x._2.name))
 
-    println(s"Foo2 SQL ${foo2.toSql}")
+    println(s"Foo2 SQL ${foo2.sql}")
     foo2.all() should contain theSameElementsAs Seq(
       ("Alice", Some("Read")),
       ("Alice", Some("Write")),
@@ -114,8 +110,7 @@ class QueryBuilderTest extends TestBaseWithH2 {
   }
 
   it should "work in a sub select case" in new EnvWithSamples {
-    val persons = Query2
-      .make[Person]
+    val persons = Person.query
       .map(p => (p.id, p.name))
 
     persons.all() shouldBe Seq(
@@ -124,22 +119,20 @@ class QueryBuilderTest extends TestBaseWithH2 {
       3 -> "Charly"
     )
 
-    val permissions = Query2
-      .make[Permission]
-      .join(Query2.make[PersonPermission])(_.id === _.permissionId)
+    val permissions = Permission.query
+      .join(QueryBuilder.make[PersonPermission])(_.id === _.permissionId)
       .map(x => (x._1.name, x._2.personId))
 
-    val joinedAgain: Query2[((Int, String), (String, Int))] =
+    val joinedAgain: QueryBuilder[((Int, String), (String, Int))] =
       persons.join(permissions)((person, permission) => person._1 === permission._2)
-    val personAndPermission                                 = joinedAgain.map(x => (x._1._2, x._2._1))
+    val personAndPermission                                       = joinedAgain.map(x => (x._1._2, x._2._1))
 
     val expected = Seq(("Alice", "Read"), ("Alice", "Write"), ("Bob", "Read"))
     personAndPermission.all() should contain theSameElementsAs expected
   }
 
   it should "work with conflicting ids" in new EnvWithSamples {
-    val persons = Query2
-      .make[Person]
+    val persons = Person.query
       .map(p => (p.id, p.id))
 
     println(persons.all())

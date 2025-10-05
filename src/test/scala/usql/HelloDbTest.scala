@@ -24,17 +24,17 @@ class HelloDbTest extends TestBaseWithH2 {
       summon[RowDecoder[(Int, String)]]
     }
 
-    sql"""SELECT id, name FROM "user" WHERE id=${1}""".query.one[(Int, String)]() shouldBe Some(1 -> "Hello World")
+    sql"""SELECT id, name FROM "user" WHERE id=${1}""".query[(Int, String)].one() shouldBe Some(1 -> "Hello World")
 
-    sql"""SELECT id, name FROM "user" WHERE id=${2}""".query.one[(Int, String)]() shouldBe None
+    sql"""SELECT id, name FROM "user" WHERE id=${2}""".query[(Int, String)].one() shouldBe None
 
-    sql"""SELECT id, name FROM "user" ORDER BY id""".query.all[(Int, String)]() shouldBe Seq(
+    sql"""SELECT id, name FROM "user" ORDER BY id""".query[(Int, String)].all() shouldBe Seq(
       1 -> "Hello World",
       3 -> "How are you?"
     )
 
     withClue("It should allow inferenced return types") {
-      val result: Seq[(Int, String)] = sql"""SELECT id, name FROM "user" ORDER BY id""".query.all()
+      val result: Seq[(Int, String)] = sql"""SELECT id, name FROM "user" ORDER BY id""".queryAll()
       result shouldBe Seq(
         1 -> "Hello World",
         3 -> "How are you?"
@@ -43,12 +43,12 @@ class HelloDbTest extends TestBaseWithH2 {
   }
 
   it should "allow hash replacements" in {
-    sql"""SELECT id, name FROM #${"\"user\""} WHERE id=${1}""".query.one[(Int, String)]() shouldBe empty
+    sql"""SELECT id, name FROM #${"\"user\""} WHERE id=${1}""".queryOne[(Int, String)]() shouldBe empty
   }
 
   it should "allow identifiers" in {
     val userTable = SqlColumnId.fromString("user")
-    sql"""SELECT id, name FROM ${userTable}""".query.one[(Int, String)]() shouldBe empty
+    sql"""SELECT id, name FROM ${userTable}""".queryOne[(Int, String)]() shouldBe empty
   }
 
   it should "allow batch inserts" in {
@@ -61,7 +61,7 @@ class HelloDbTest extends TestBaseWithH2 {
     val response    = batchInsert.run()
     response shouldBe Seq(1, 1)
 
-    val got = sql"""SELECT id, name FROM "user" ORDER BY ID""".query.all[(Int, String)]()
+    val got = sql"""SELECT id, name FROM "user" ORDER BY ID""".queryAll[(Int, String)]()
     got shouldBe Seq(
       1 -> "Hello",
       2 -> "World"
@@ -76,13 +76,13 @@ class HelloDbTest extends TestBaseWithH2 {
         insertCall.execute()
       }
     }
-    sql"SELECT COUNT(*) FROM ${tableName}".query.one[Int]() shouldBe Some(0)
+    sql"SELECT COUNT(*) FROM ${tableName}".queryOne[Int]() shouldBe Some(0)
 
     transaction {
       insertCall.execute()
     }
 
-    sql"SELECT COUNT(*) FROM ${tableName}".query.one[Int]() shouldBe Some(1)
+    sql"SELECT COUNT(*) FROM ${tableName}".queryOne[Int]() shouldBe Some(1)
   }
 
   it should "allow in queries" in {
@@ -94,16 +94,16 @@ class HelloDbTest extends TestBaseWithH2 {
     val got =
       sql"""
         SELECT name FROM "user" WHERE id IN (${SqlParameters(ids)})
-         """.query.all[String]()
+         """.queryAll[String]()
 
     got should contain theSameElementsAs Seq("Alice", "Bob")
 
     sql"""
             SELECT name FROM "user" WHERE id IN (${SqlParameters(Seq(9, 8, 7, 6))})
-             """.query.all[String]() shouldBe empty
+             """.queryAll[String]() shouldBe empty
 
     sql"""
                 SELECT name FROM "user" WHERE id IN (${SqlParameters(Nil: Seq[Int])})
-                 """.query.all[String]() shouldBe empty
+                 """.queryAll[String]() shouldBe empty
   }
 }

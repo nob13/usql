@@ -3,14 +3,20 @@ package usql
 import java.sql.{Connection, ResultSet}
 import scala.util.Using
 
-/** The user wants o issue a query. */
-case class Query(sql: SqlBase) {
+/** An SQL Query */
+trait Query[T] {
+
+  /** The SQL of the Query */
+  def sql: SqlBase
+
+  /** The row decoder */
+  def rowDecoder: RowDecoder[T]
 
   /** Run a query for one row. */
-  def one[T]()(using rowParser: RowDecoder[T], cp: ConnectionProvider): Option[T] = {
+  def one()(using cp: ConnectionProvider): Option[T] = {
     run { resultSet =>
       if resultSet.next() then {
-        Some(rowParser.parseRow(resultSet))
+        Some(rowDecoder.parseRow(resultSet))
       } else {
         None
       }
@@ -18,22 +24,26 @@ case class Query(sql: SqlBase) {
   }
 
   /** Run a query for all rows. */
-  def all[T]()(using rowParser: RowDecoder[T], cp: ConnectionProvider): Vector[T] = {
+  def all()(using cp: ConnectionProvider): Vector[T] = {
     run { resultSet =>
       val builder = Vector.newBuilder[T]
       while resultSet.next() do {
-        builder += rowParser.parseRow(resultSet)
+        builder += rowDecoder.parseRow(resultSet)
       }
       builder.result()
     }
   }
 
   /** Run with some method decoding the result set. */
-  private def run[T](f: ResultSet => T)(using cp: ConnectionProvider): T = {
+  private def run[X](f: ResultSet => X)(using cp: ConnectionProvider): X = {
     sql.withPreparedStatement { statement =>
       Using.resource(statement.executeQuery()) { resultSet =>
         f(resultSet)
       }
     }
   }
+}
+
+object Query {
+  case class Simple[T](sql: SqlBase, rowDecoder: RowDecoder[T]) extends Query[T]
 }

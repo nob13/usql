@@ -1,19 +1,21 @@
 package usql.dao
 
-import usql.dao.Query2.{FromItem, makeSelect}
-import usql.{ConnectionProvider, Query, Sql, SqlColumnId, SqlInterpolationParameter, sql}
+import usql.dao.QueryBuilder.{FromItem, makeSelect}
+import usql.{Query, RowDecoder, Sql, SqlInterpolationParameter, sql}
 
 import java.util.UUID
 
-trait Query2[T] {
+/** A Query Builder based upon filter, map and join methods. */
+trait QueryBuilder[T] extends Query[T] {
 
   final type BPath = ColumnPath[T, T]
 
   /** Returns the base path fore mapping operations. */
   protected def basePath: BPath
 
-  /** Convert this Query to SQL. */
-  final def toSql: Sql = toPreSql.simplifyAliases
+  final def sql: Sql = toPreSql.simplifyAliases
+
+  override def rowDecoder: RowDecoder[T] = fielded.rowDecoder
 
   /** Convert this query to SQL (before End-Optimizations) */
   protected def toPreSql: Sql
@@ -22,12 +24,12 @@ trait Query2[T] {
   def fielded: SqlFielded[T]
 
   /** Map one element. */
-  def map[R0](f: BPath => ColumnPath[T, R0]): Query2[R0] = project(f(basePath))
+  def map[R0](f: BPath => ColumnPath[T, R0]): QueryBuilder[R0] = project(f(basePath))
 
   /** Join two queries. */
-  def join[R](right: Query2[R])(
+  def join[R](right: QueryBuilder[R])(
       on: (BPath, right.BPath) => Rep[Boolean]
-  ): Query2[(T, R)] = {
+  ): QueryBuilder[(T, R)] = {
     val leftSource  = this.asFromItem()
     val rightSource = right.asFromItem()
     val joinSource  = FromItem.InnerJoin(leftSource, rightSource, on(leftSource.basePath, rightSource.basePath))
@@ -35,9 +37,9 @@ trait Query2[T] {
   }
 
   /** Left Join two Queries */
-  def leftJoin[R](right: Query2[R])(
+  def leftJoin[R](right: QueryBuilder[R])(
       on: (BPath, right.BPath) => Rep[Boolean]
-  ): Query2[(T, Option[R])] = {
+  ): QueryBuilder[(T, Option[R])] = {
     val leftSource  = this.asFromItem()
     val rightSource = right.asFromItem()
     val joinSource  = FromItem.LeftJoin(leftSource, rightSource, on(leftSource.basePath, rightSource.basePath))
@@ -45,22 +47,14 @@ trait Query2[T] {
   }
 
   /** Filter step. */
-  def filter(f: BPath => Rep[Boolean]): Query2[T] = {
+  def filter(f: BPath => Rep[Boolean]): QueryBuilder[T] = {
     val from = asFromItem()
-    Query2.Select(from, from.basePath, Seq(f(from.basePath)))
+    QueryBuilder.Select(from, from.basePath, Seq(f(from.basePath)))
   }
 
   /** Project values. */
-  def project[P](p: ColumnPath[T, P]): Query2[P] = {
-    Query2.Select(asFromItem(), p)
-  }
-
-  def one()(using cp: ConnectionProvider): Option[T] = {
-    Query(toSql).one()(using fielded.rowDecoder)
-  }
-
-  def all()(using cp: ConnectionProvider): Vector[T] = {
-    Query(toSql).all()(using fielded.rowDecoder)
+  def project[P](p: ColumnPath[T, P]): QueryBuilder[P] = {
+    QueryBuilder.Select(asFromItem(), p)
   }
 
   private def asFromItem(): FromItem[T] = {
@@ -72,8 +66,8 @@ trait Query2[T] {
   def asPureFromItem: Option[FromItem[T]]
 }
 
-object Query2 {
-  def make[T](using tabular: SqlTabular[T]): Query2[T] = {
+object QueryBuilder {
+  def make[T](using tabular: SqlTabular[T]): QueryBuilder[T] = {
     val aliasName = s"${tabular.table}-${UUID.randomUUID()}" // will be shortened on cleanup
     val from      = FromItem.Aliased(FromItem.FromTable(tabular), aliasName)
     makeSelect(from)
@@ -100,7 +94,7 @@ object Query2 {
       override def toPreSql: Sql = sql"${tabular.table}"
     }
 
-    case class SubSelect[T](query2: Query2[T]) extends FromItem[T] {
+    case class SubSelect[T](query2: QueryBuilder[T]) extends FromItem[T] {
       override def fielded: SqlFielded[T] = query2.fielded.dropAlias
 
       override def toPreSql: Sql = sql"(${query2.toPreSql})"
@@ -127,7 +121,7 @@ object Query2 {
   }
 
   case class Select[T, P](from: FromItem[T], projection: ColumnPath[T, P], filters: Seq[Rep[Boolean]] = Nil)
-      extends Query2[P] {
+      extends QueryBuilder[P] {
     protected override def toPreSql: Sql = {
       val maybeFilterSql: SqlInterpolationParameter = if filters.isEmpty then {
         SqlInterpolationParameter.Empty
@@ -149,7 +143,7 @@ object Query2 {
 
     /** The fielded representation inside (using aliases) */
     lazy val innerFielded: SqlFielded[P] = {
-      Query2.ensureFielded(projection.structure)
+      QueryBuilder.ensureFielded(projection.structure)
     }
 
     override protected def basePath: BPath = {
@@ -174,7 +168,7 @@ object Query2 {
       }
     }
 
-    override def join[R](right: Query2[R])(on: (BPath, right.BPath) => Rep[Boolean]): Query2[(P, R)] = {
+    override def join[R](right: QueryBuilder[R])(on: (BPath, right.BPath) => Rep[Boolean]): QueryBuilder[(P, R)] = {
       // If we are pure, we can directly combine the fromItems
       (for
         leftPure  <- this.asPureFromItem
@@ -188,7 +182,9 @@ object Query2 {
       }
     }
 
-    override def leftJoin[R](right: Query2[R])(on: (BPath, right.BPath) => Rep[Boolean]): Query2[(P, Option[R])] = {
+    override def leftJoin[R](
+        right: QueryBuilder[R]
+    )(on: (BPath, right.BPath) => Rep[Boolean]): QueryBuilder[(P, Option[R])] = {
       // If we are pure, we can directly combine the fromItems
       (for
         leftPure  <- this.asPureFromItem
