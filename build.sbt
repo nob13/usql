@@ -37,7 +37,7 @@ def publishSettings = Seq(
 
 ThisBuild / version      := artefactVersion
 ThisBuild / organization := "net.reactivecore"
-ThisBuild / scalaVersion := "3.7.2"
+ThisBuild / scalaVersion := "3.7.3"
 ThisBuild / Test / fork  := true
 ThisBuild / scalacOptions ++= Seq("-new-syntax", "-rewrite")
 
@@ -49,8 +49,8 @@ lazy val root = (project in file("."))
     libraryDependencies ++= Seq(
       "org.scalatest" %% "scalatest"          % scalaTestVersion % Test,
       "org.scalatest" %% "scalatest-flatspec" % scalaTestVersion % Test,
-      "com.h2database" % "h2"                 % "2.3.232"        % Test,
-      "org.postgresql" % "postgresql"         % "42.7.7"         % Test
+      "com.h2database" % "h2"                 % "2.4.240"        % Test,
+      "org.postgresql" % "postgresql"         % "42.7.8"         % Test
     ),
     publishSettings
   )
