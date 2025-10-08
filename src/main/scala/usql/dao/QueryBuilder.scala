@@ -5,14 +5,15 @@ import usql.{Query, RowDecoder, Sql, SqlInterpolationParameter, sql}
 
 import java.util.UUID
 
+type ColumnBasePath[T] = ColumnPath[T, T]
+
 /** A Query Builder based upon filter, map and join methods. */
 trait QueryBuilder[T] extends Query[T] {
 
-  final type BPath = ColumnPath[T, T]
-
   /** Returns the base path fore mapping operations. */
-  protected def basePath: BPath
+  protected def basePath: ColumnPath[T, T]
 
+  /** Convert this query to SQL. */
   final def sql: Sql = toPreSql.simplifyAliases
 
   override def rowDecoder: RowDecoder[T] = fielded.rowDecoder
@@ -24,11 +25,14 @@ trait QueryBuilder[T] extends Query[T] {
   def fielded: SqlFielded[T]
 
   /** Map one element. */
-  def map[R0](f: BPath => ColumnPath[T, R0]): QueryBuilder[R0] = project(f(basePath))
+  def map[R0](f: ColumnPath[T, T] => ColumnPath[T, R0]): QueryBuilder[R0]
+
+  /** Project values. */
+  def project[P](p: ColumnPath[T, P]): QueryBuilder[P]
 
   /** Join two queries. */
   def join[R](right: QueryBuilder[R])(
-      on: (BPath, right.BPath) => Rep[Boolean]
+      on: (ColumnBasePath[T], ColumnBasePath[R]) => Rep[Boolean]
   ): QueryBuilder[(T, R)] = {
     val leftSource  = this.asFromItem()
     val rightSource = right.asFromItem()
@@ -38,7 +42,7 @@ trait QueryBuilder[T] extends Query[T] {
 
   /** Left Join two Queries */
   def leftJoin[R](right: QueryBuilder[R])(
-      on: (BPath, right.BPath) => Rep[Boolean]
+      on: (ColumnBasePath[T], ColumnBasePath[R]) => Rep[Boolean]
   ): QueryBuilder[(T, Option[R])] = {
     val leftSource  = this.asFromItem()
     val rightSource = right.asFromItem()
@@ -47,26 +51,58 @@ trait QueryBuilder[T] extends Query[T] {
   }
 
   /** Filter step. */
-  def filter(f: BPath => Rep[Boolean]): QueryBuilder[T] = {
-    val from = asFromItem()
-    QueryBuilder.Select(from, from.basePath, Seq(f(from.basePath)))
-  }
+  def filter(f: ColumnPath[T, T] => Rep[Boolean]): QueryBuilder[T]
 
-  /** Project values. */
-  def project[P](p: ColumnPath[T, P]): QueryBuilder[P] = {
-    QueryBuilder.Select(asFromItem(), p)
-  }
-
-  private def asFromItem(): FromItem[T] = {
+  private[usql] def asFromItem(): FromItem[T] = {
     val aliasName = s"X-${UUID.randomUUID()}"
     FromItem.Aliased(FromItem.SubSelect(this), aliasName)
   }
 
   /** Returns the from item, if this Query is just returning the source. */
-  def asPureFromItem: Option[FromItem[T]]
+  private[usql] def asPureFromItem: Option[FromItem[T]]
+}
+
+/** A Query Builder which somehow still presents a projected table. Supports update call. */
+trait QueryBuilderForProjectedTable[T] extends QueryBuilder[T] {
+
+  /** Update elements. */
+  def update(in: T): Long
+
+  override def map[R0](f: ColumnPath[T, T] => ColumnPath[T, R0]): QueryBuilderForProjectedTable[R0]
+
+  override def project[P](p: ColumnPath[T, P]): QueryBuilderForProjectedTable[P]
+}
+
+/** A Query builder which somehow still presents a table. Supports delete call */
+trait QueryBuilderForTable[T] extends QueryBuilderForProjectedTable[T] {
+
+  /** Delete selected elements. */
+  def delete(): Long
+
+  override def filter(f: ColumnPath[T, T] => Rep[Boolean]): QueryBuilderForTable[T]
 }
 
 object QueryBuilder {
+
+  trait CommonMethods[T] extends QueryBuilder[T] {
+
+    /** Returns the base path fore mapping operations. */
+    protected def basePath: ColumnPath[T, T]
+
+    override def project[P](p: ColumnPath[T, P]): QueryBuilder[P] = {
+      QueryBuilder.Select(this.asFromItem(), p)
+    }
+
+    override def map[R0](f: ColumnPath[T, T] => ColumnPath[T, R0]): QueryBuilder[R0] = {
+      project(f(basePath))
+    }
+
+    override def filter(f: ColumnPath[T, T] => Rep[Boolean]): QueryBuilder[T] = {
+      val from = asFromItem()
+      QueryBuilder.Select(from, from.basePath, Seq(f(from.basePath)))
+    }
+  }
+
   def make[T](using tabular: SqlTabular[T]): QueryBuilder[T] = {
     val aliasName = s"${tabular.table.name}-${UUID.randomUUID()}" // will be shortened on cleanup
     val from      = FromItem.Aliased(FromItem.FromTable(tabular), aliasName)
@@ -120,7 +156,7 @@ object QueryBuilder {
     }
   }
 
-  case class Select[T, P](from: FromItem[T], projection: ColumnPath[T, P], filters: Seq[Rep[Boolean]] = Nil)
+  class Select[T, P](from: FromItem[T], projection: ColumnPath[T, P], filters: Seq[Rep[Boolean]] = Nil)
       extends QueryBuilder[P] {
     protected override def toPreSql: Sql = {
       val maybeFilterSql: SqlInterpolationParameter = if filters.isEmpty then {
@@ -146,20 +182,28 @@ object QueryBuilder {
       QueryBuilder.ensureFielded(projection.structure)
     }
 
-    override protected def basePath: BPath = {
+    protected def basePath: ColumnPath[P, P] = {
       ColumnPath.make[P](using innerFielded)
     }
 
-    override def filter(f: BPath => Rep[Boolean]): Select[T, P] = {
-      copy(
+    override def filter(f: ColumnPath[P, P] => Rep[Boolean]): Select[T, P] = {
+      Select(
+        from,
+        projection,
         filters = filters :+ f(basePath)
       )
     }
 
     override def project[P2](p: ColumnPath[P, P2]): Select[T, P2] = {
-      copy(
-        projection = ColumnPath.concat(projection, p)
+      Select(
+        from,
+        projection = ColumnPath.concat(projection, p),
+        filters
       )
+    }
+
+    override def map[R0](f: ColumnPath[P, P] => ColumnPath[P, R0]): QueryBuilder[R0] = {
+      project(f(basePath))
     }
 
     override def asPureFromItem: Option[FromItem[P]] = {
@@ -168,7 +212,9 @@ object QueryBuilder {
       }
     }
 
-    override def join[R](right: QueryBuilder[R])(on: (BPath, right.BPath) => Rep[Boolean]): QueryBuilder[(P, R)] = {
+    override def join[R](
+        right: QueryBuilder[R]
+    )(on: (ColumnPath[P, P], ColumnPath[R, R]) => Rep[Boolean]): QueryBuilder[(P, R)] = {
       // If we are pure, we can directly combine the fromItems
       (for
         leftPure  <- this.asPureFromItem
@@ -184,7 +230,7 @@ object QueryBuilder {
 
     override def leftJoin[R](
         right: QueryBuilder[R]
-    )(on: (BPath, right.BPath) => Rep[Boolean]): QueryBuilder[(P, Option[R])] = {
+    )(on: (ColumnPath[P, P], ColumnPath[R, R]) => Rep[Boolean]): QueryBuilder[(P, Option[R])] = {
       // If we are pure, we can directly combine the fromItems
       (for
         leftPure  <- this.asPureFromItem
@@ -197,6 +243,57 @@ object QueryBuilder {
         super.leftJoin(right)(on)
       }
     }
+  }
+
+  case class SimpleTableSelect[T](tabular: SqlTabular[T], filters: Seq[ColumnPath[T, T] => Rep[Boolean]] = Nil)
+      extends QueryBuilderForTable[T] {
+
+    override def filter(f: ColumnBasePath[T] => Rep[Boolean]): QueryBuilderForTable[T] = SimpleTableSelect(
+      tabular,
+      filters = filters :+ f
+    )
+
+    override def update(in: T): Long = ???
+
+    override def project[P](p: ColumnPath[T, P]): QueryBuilderForProjectedTable[P] = {
+      new SimpleTableProject(this, p)
+    }
+
+    override def map[R0](f: ColumnBasePath[T] => ColumnPath[T, R0]): QueryBuilderForProjectedTable[R0] = {
+      project(f(basePath))
+    }
+
+    override protected def toPreSql: Sql = ???
+
+    override def fielded: SqlFielded[T] = tabular
+
+    override private[usql] def asPureFromItem: Option[FromItem[T]] = ???
+
+    override def delete(): Long = ???
+
+    protected def basePath: ColumnBasePath[T] = {
+      ColumnPath.make[T](using tabular)
+    }
+  }
+
+  case class SimpleTableProject[T, P](in: SimpleTableSelect[T], projection: ColumnPath[T, P])
+      extends QueryBuilderForProjectedTable[P] {
+    override def update(in: P): Long = ???
+
+    override def map[R0](f: ColumnBasePath[P] => ColumnPath[P, R0]): QueryBuilderForProjectedTable[R0] = ???
+
+    override def project[X](p: ColumnPath[P, X]): QueryBuilderForProjectedTable[X] = ???
+
+    override protected def basePath: ColumnBasePath[P] = ???
+
+    override protected def toPreSql: Sql = ???
+
+    override def fielded: SqlFielded[P] = ???
+
+    override def filter(f: ColumnBasePath[P] => Rep[Boolean]): QueryBuilder[P] = ??? // TODO
+
+    override private[usql] def asPureFromItem: Option[FromItem[P]] = ???
+
   }
 
   private def makeSelect[T](from: FromItem[T]): Select[T, T] = Select(from, from.basePath)
