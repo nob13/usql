@@ -67,7 +67,7 @@ abstract class CrdBase[T] extends Crd[T] {
   def cols: ColumnPath[T, T] = tabular.cols
 
   /** Start using within query builder. */
-  def query: QueryBuilder[T] = QueryBuilder.make(using tabular)
+  def query: QueryBuilderForTable[T] = QueryBuilder.make(using tabular)
 
   private lazy val insertStatement = {
     val placeholders = SqlRawPart(tabular.columns.map(_.id.placeholder.s).mkString(","))

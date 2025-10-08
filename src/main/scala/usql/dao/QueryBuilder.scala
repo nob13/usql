@@ -103,10 +103,13 @@ object QueryBuilder {
     }
   }
 
-  def make[T](using tabular: SqlTabular[T]): QueryBuilder[T] = {
+  def make[T](using tabular: SqlTabular[T]): QueryBuilderForTable[T] = {
+    ???
+    /*
     val aliasName = s"${tabular.table.name}-${UUID.randomUUID()}" // will be shortened on cleanup
     val from      = FromItem.Aliased(FromItem.FromTable(tabular), aliasName)
     makeSelect(from)
+     */
   }
 
   sealed trait FromItem[T] {

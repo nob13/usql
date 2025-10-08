@@ -148,4 +148,16 @@ class QueryBuilderTest extends TestBaseWithH2 {
       SqlColumn("id0", DataType.get[Int])
     )
   }
+
+  it should "delete in simple cases" in new EnvWithSamples {
+    Person.query.filter(_.id === 1).delete()
+    val all = Person.findAll()
+    all should contain theSameElementsAs Seq(bob, charly)
+  }
+
+  it should "update in simple cases" in new EnvWithSamples {
+    Person.query.filter(_.id === 1).map(_.name).update("AliceX")
+    val all = Person.findAll()
+    all should contain theSameElementsAs Seq(alice.copy(name = "AliceX"), bob, charly)
+  }
 }
