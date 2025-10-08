@@ -68,7 +68,7 @@ trait QueryBuilder[T] extends Query[T] {
 
 object QueryBuilder {
   def make[T](using tabular: SqlTabular[T]): QueryBuilder[T] = {
-    val aliasName = s"${tabular.table}-${UUID.randomUUID()}" // will be shortened on cleanup
+    val aliasName = s"${tabular.table.name}-${UUID.randomUUID()}" // will be shortened on cleanup
     val from      = FromItem.Aliased(FromItem.FromTable(tabular), aliasName)
     makeSelect(from)
   }

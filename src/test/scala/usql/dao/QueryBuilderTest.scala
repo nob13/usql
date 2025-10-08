@@ -83,6 +83,18 @@ class QueryBuilderTest extends TestBaseWithH2 {
     withoutAge should contain theSameElementsAs Seq(2 -> "Bob", 3 -> "Charly")
   }
 
+  it should "work with a single join" in new EnvWithSamples {
+    val foo: QueryBuilder[(Person, Int)] = Person.query
+      .join(PersonPermission.query)(_.id === _.personId)
+      .map(x => (x._1, x._2.permissionId))
+    println(s"SQL=${foo.sql}")
+    foo.all() should contain theSameElementsAs Seq(
+      alice -> read.id,
+      alice -> write.id,
+      bob   -> read.id
+    )
+  }
+
   it should "with simple joins" in new EnvWithSamples {
     val foo = Person.query
       .join(PersonPermission.query)(_.id === _.personId)
