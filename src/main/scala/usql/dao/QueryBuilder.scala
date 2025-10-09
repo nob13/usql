@@ -26,28 +26,16 @@ trait QueryBuilder[T] extends Query[T] {
   /** Project values. */
   def project[P](p: ColumnPath[T, P]): QueryBuilder[P]
 
+  /** Filter step. */
+  def filter(f: ColumnBasePath[T] => Rep[Boolean]): QueryBuilder[T]
+
   /** Join two queries. */
-  def join[R](right: QueryBuilder[R])(
-      on: (ColumnBasePath[T], ColumnBasePath[R]) => Rep[Boolean]
-  ): QueryBuilder[(T, R)] = {
-    val leftSource  = this.asFromItem()
-    val rightSource = right.asFromItem()
-    val joinSource  = FromItem.InnerJoin(leftSource, rightSource, on(leftSource.basePath, rightSource.basePath))
-    Select.makeSelect(joinSource)
-  }
+  def join[R](right: QueryBuilder[R])(on: (ColumnBasePath[T], ColumnBasePath[R]) => Rep[Boolean]): QueryBuilder[(T, R)]
 
   /** Left Join two Queries */
   def leftJoin[R](right: QueryBuilder[R])(
       on: (ColumnBasePath[T], ColumnBasePath[R]) => Rep[Boolean]
-  ): QueryBuilder[(T, Option[R])] = {
-    val leftSource  = this.asFromItem()
-    val rightSource = right.asFromItem()
-    val joinSource  = FromItem.LeftJoin(leftSource, rightSource, on(leftSource.basePath, rightSource.basePath))
-    Select.makeSelect(joinSource)
-  }
-
-  /** Filter step. */
-  def filter(f: ColumnBasePath[T] => Rep[Boolean]): QueryBuilder[T]
+  ): QueryBuilder[(T, Option[R])]
 
   private[usql] def asFromItem(): FromItem[T] = {
     val aliasName = s"X-${UUID.randomUUID()}"
@@ -100,11 +88,6 @@ object QueryBuilder {
   }
 
   def make[T](using tabular: SqlTabular[T]): QueryBuilderForTable[T] = {
-    ???
-    /*
-    val aliasName = s"${tabular.table.name}-${UUID.randomUUID()}" // will be shortened on cleanup
-    val from      = FromItem.Aliased(FromItem.FromTable(tabular), aliasName)
-    makeSelect(from)
-     */
+    SimpleTableSelect(tabular)
   }
 }
