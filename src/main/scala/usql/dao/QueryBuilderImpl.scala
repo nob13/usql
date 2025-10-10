@@ -179,7 +179,15 @@ private[usql] case class SimpleTableProject[T, P](in: SimpleTableSelect[T], proj
     sql"SELECT ${projectionString} FROM ${in.tabular.table} ${maybeFilterSql}"
   }
 
-  override def fielded: SqlFielded[P] = ensureFielded(projection.structure)
+  /** The fielded representation from the outside. */
+  lazy val fielded: SqlFielded[P] = {
+    innerFielded.ensureUniqueColumnIds(keepAlias = false)
+  }
+
+  /** The fielded representation inside (using aliases) */
+  lazy val innerFielded: SqlFielded[P] = {
+    ensureFielded(projection.structure)
+  }
 
   override def filter(f: ColumnBasePath[P] => Rep[Boolean]): QueryBuilder[P] = {
     val mappedFilter: ColumnBasePath[T] => Rep[Boolean] = in => {
