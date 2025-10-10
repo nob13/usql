@@ -66,7 +66,7 @@ private[usql] class Select[T, P](from: FromItem[T], projection: ColumnPath[T, P]
     ColumnPath.make[P](using innerFielded)
   }
 
-  override def filter(f: ColumnPath[P, P] => Rep[Boolean]): Select[T, P] = {
+  override def filter(f: ColumnBasePath[P] => Rep[Boolean]): Select[T, P] = {
     Select(
       from,
       projection,
@@ -94,7 +94,7 @@ private[usql] class Select[T, P](from: FromItem[T], projection: ColumnPath[T, P]
 
   override def join[R](
       right: QueryBuilder[R]
-  )(on: (ColumnPath[P, P], ColumnPath[R, R]) => Rep[Boolean]): QueryBuilder[(P, R)] = {
+  )(on: (ColumnBasePath[P], ColumnBasePath[R]) => Rep[Boolean]): QueryBuilder[(P, R)] = {
     // If we are pure, we can directly combine the fromItems
     (for
       leftPure  <- this.asPureFromItem
@@ -110,7 +110,7 @@ private[usql] class Select[T, P](from: FromItem[T], projection: ColumnPath[T, P]
 
   override def leftJoin[R](
       right: QueryBuilder[R]
-  )(on: (ColumnPath[P, P], ColumnPath[R, R]) => Rep[Boolean]): QueryBuilder[(P, Option[R])] = {
+  )(on: (ColumnBasePath[P], ColumnBasePath[R]) => Rep[Boolean]): QueryBuilder[(P, Option[R])] = {
     // If we are pure, we can directly combine the fromItems
     (for
       leftPure  <- this.asPureFromItem
@@ -146,7 +146,7 @@ private[usql] case class SimpleTableSelect[T](
     SimpleTableProject(this, p)
   }
 
-  override def map[R0](f: ColumnBasePath[T] => ColumnPath[T, R0]): QueryBuilderForProjectedTable[R0] = {
+  override def map[R0](f: ColumnPath[T, T] => ColumnPath[T, R0]): QueryBuilderForProjectedTable[R0] = {
     project(f(basePath))
   }
 
@@ -179,7 +179,7 @@ private[usql] case class SimpleTableSelect[T](
 
   override def delete(): Long = ???
 
-  protected def basePath: ColumnBasePath[T] = {
+  protected def basePath: ColumnPath[T, T] = {
     ColumnPath.make[T](using tabular)
   }
 }
@@ -189,7 +189,7 @@ private[usql] case class SimpleTableProject[T, P](in: SimpleTableSelect[T], proj
     with QueryBuilderBase[P] {
   override def update(in: P): Long = ???
 
-  override def map[R0](f: ColumnBasePath[P] => ColumnPath[P, R0]): QueryBuilderForProjectedTable[R0] = {
+  override def map[R0](f: ColumnPath[P, P] => ColumnPath[P, R0]): QueryBuilderForProjectedTable[R0] = {
     project(f(basePath))
   }
 
@@ -220,5 +220,5 @@ private[usql] case class SimpleTableProject[T, P](in: SimpleTableSelect[T], proj
 
   override private[usql] def asPureFromItem: Option[FromItem[P]] = None
 
-  override protected def basePath: ColumnBasePath[P] = ColumnPath.make[P](using fielded)
+  override protected def basePath: ColumnPath[P, P] = ColumnPath.make[P](using fielded)
 }

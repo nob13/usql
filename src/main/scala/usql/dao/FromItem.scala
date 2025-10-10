@@ -8,7 +8,7 @@ private[usql] sealed trait FromItem[T] {
 
   def toPreSql: Sql
 
-  lazy val basePath: ColumnBasePath[T] = ColumnPath.make(using fielded)
+  lazy val basePath: ColumnPath[T, T] = ColumnPath.make(using fielded)
 }
 
 private[usql] object FromItem {

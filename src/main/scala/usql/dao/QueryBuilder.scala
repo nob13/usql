@@ -4,7 +4,7 @@ import usql.{Query, RowDecoder, Sql, SqlInterpolationParameter, sql}
 
 import java.util.UUID
 
-type ColumnBasePath[T] = ColumnPath[T, T]
+type ColumnBasePath[T] = ColumnPath[?, T]
 
 /** A Query Builder based upon filter, map and join methods. */
 trait QueryBuilder[T] extends Query[T] {
@@ -21,7 +21,7 @@ trait QueryBuilder[T] extends Query[T] {
   def fielded: SqlFielded[T]
 
   /** Map one element. */
-  def map[R0](f: ColumnBasePath[T] => ColumnPath[T, R0]): QueryBuilder[R0]
+  def map[R0](f: ColumnPath[T, T] => ColumnPath[T, R0]): QueryBuilder[R0]
 
   /** Project values. */
   def project[P](p: ColumnPath[T, P]): QueryBuilder[P]
@@ -52,7 +52,7 @@ trait QueryBuilderForProjectedTable[T] extends QueryBuilder[T] {
   /** Update elements. */
   def update(in: T): Long
 
-  override def map[R0](f: ColumnBasePath[T] => ColumnPath[T, R0]): QueryBuilderForProjectedTable[R0]
+  override def map[R0](f: ColumnPath[T, T] => ColumnPath[T, R0]): QueryBuilderForProjectedTable[R0]
 
   override def project[P](p: ColumnPath[T, P]): QueryBuilderForProjectedTable[P]
 }
@@ -71,13 +71,13 @@ object QueryBuilder {
   trait CommonMethods[T] extends QueryBuilder[T] {
 
     /** Returns the base path fore mapping operations. */
-    protected def basePath: ColumnBasePath[T]
+    protected def basePath: ColumnPath[T, T]
 
     override def project[P](p: ColumnPath[T, P]): QueryBuilder[P] = {
       Select(this.asFromItem(), p)
     }
 
-    override def map[R0](f: ColumnBasePath[T] => ColumnPath[T, R0]): QueryBuilder[R0] = {
+    override def map[R0](f: ColumnPath[T, T] => ColumnPath[T, R0]): QueryBuilder[R0] = {
       project(f(basePath))
     }
 
