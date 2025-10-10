@@ -30,6 +30,30 @@ private[usql] trait QueryBuilderBase[T] extends QueryBuilder[T] {
   }
 }
 
+/** Something is projected. */
+private[usql] trait QueryBuilderProjected[T, P] extends QueryBuilder[P] {
+
+  /** The projection. */
+  def projection: ColumnPath[T, P]
+
+  /** The fielded representation from the outside. */
+  lazy val fielded: SqlFielded[P] = {
+    innerFielded.ensureUniqueColumnIds(keepAlias = false)
+  }
+
+  /** The fielded representation inside. */
+  lazy val innerFielded: SqlFielded[P] = {
+    ensureFielded(projection.structure)
+  }
+
+  /** The projection SQL String */
+  protected def projectionString = SqlInterpolationParameter.MultipleSeparated(
+    projection.columnIds.zip(fielded.columns.map(_.id)).map { case (p, as) =>
+      sql"${p} AS ${as}"
+    }
+  )
+}
+
 private def ensureFielded[C](in: SqlColumn[C] | SqlFielded[C]): SqlFielded[C] = {
   in match {
     case f: SqlFielded[C] => f
@@ -38,30 +62,16 @@ private def ensureFielded[C](in: SqlColumn[C] | SqlFielded[C]): SqlFielded[C] = 
 }
 
 /** A Generic select from a [[FromItem]] */
-private[usql] class Select[T, P](from: FromItem[T], projection: ColumnPath[T, P], filters: Seq[Rep[Boolean]] = Nil)
-    extends QueryBuilderBase[P] {
+private[usql] case class Select[T, P](from: FromItem[T], projection: ColumnPath[T, P], filters: Seq[Rep[Boolean]] = Nil)
+    extends QueryBuilderBase[P]
+    with QueryBuilderProjected[T, P] {
   override def toPreSql: Sql = {
     val maybeFilterSql: SqlInterpolationParameter = if filters.isEmpty then {
       SqlInterpolationParameter.Empty
     } else {
       sql" WHERE ${filters.reduce(_ && _).toInterpolationParameter}"
     }
-    val projectionString                          = SqlInterpolationParameter.MultipleSeparated(
-      projection.columnIds.zip(fielded.columns.map(_.id)).map { case (p, as) =>
-        sql"${p} AS ${as}"
-      }
-    )
     sql"SELECT ${projectionString} FROM ${from.toPreSql} ${maybeFilterSql}"
-  }
-
-  /** The fielded representation from the outside. */
-  lazy val fielded: SqlFielded[P] = {
-    innerFielded.ensureUniqueColumnIds(keepAlias = false)
-  }
-
-  /** The fielded representation inside (using aliases) */
-  lazy val innerFielded: SqlFielded[P] = {
-    ensureFielded(projection.structure)
   }
 
   protected def basePath: ColumnPath[P, P] = {
@@ -153,7 +163,8 @@ private[usql] case class SimpleTableSelect[T](
 
 private[usql] case class SimpleTableProject[T, P](in: SimpleTableSelect[T], projection: ColumnPath[T, P])
     extends QueryBuilderForProjectedTable[P]
-    with QueryBuilderBase[P] {
+    with QueryBuilderBase[P]
+    with QueryBuilderProjected[T, P] {
   override def update(in: P): Long = ???
 
   override def map[R0](f: ColumnPath[P, P] => ColumnPath[P, R0]): QueryBuilderForProjectedTable[R0] = {
@@ -171,22 +182,7 @@ private[usql] case class SimpleTableProject[T, P](in: SimpleTableSelect[T], proj
       case None    => SqlInterpolationParameter.Empty
     }
 
-    val projectionString = SqlInterpolationParameter.MultipleSeparated(
-      projection.columnIds.zip(fielded.columns.map(_.id)).map { case (p, as) =>
-        sql"${p} AS ${as}"
-      }
-    )
     sql"SELECT ${projectionString} FROM ${in.tabular.table} ${maybeFilterSql}"
-  }
-
-  /** The fielded representation from the outside. */
-  lazy val fielded: SqlFielded[P] = {
-    innerFielded.ensureUniqueColumnIds(keepAlias = false)
-  }
-
-  /** The fielded representation inside (using aliases) */
-  lazy val innerFielded: SqlFielded[P] = {
-    ensureFielded(projection.structure)
   }
 
   override def filter(f: ColumnBasePath[P] => Rep[Boolean]): QueryBuilder[P] = {
