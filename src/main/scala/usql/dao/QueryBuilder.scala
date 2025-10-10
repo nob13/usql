@@ -1,6 +1,6 @@
 package usql.dao
 
-import usql.{Query, RowDecoder, Sql, SqlInterpolationParameter, sql}
+import usql.{ConnectionProvider, Query, RowDecoder, Sql, SqlInterpolationParameter, sql}
 
 import java.util.UUID
 
@@ -48,7 +48,7 @@ trait QueryBuilder[T] extends Query[T] {
 trait QueryBuilderForProjectedTable[T] extends QueryBuilder[T] {
 
   /** Update elements. */
-  def update(in: T): Long
+  def update(in: T)(using cp: ConnectionProvider): Long
 
   override def map[R0](f: ColumnPath[T, T] => ColumnPath[T, R0]): QueryBuilderForProjectedTable[R0]
 
@@ -59,7 +59,7 @@ trait QueryBuilderForProjectedTable[T] extends QueryBuilder[T] {
 trait QueryBuilderForTable[T] extends QueryBuilderForProjectedTable[T] {
 
   /** Delete selected elements. */
-  def delete(): Long
+  def delete()(using cp: ConnectionProvider): Long
 
   override def filter(f: ColumnBasePath[T] => Rep[Boolean]): QueryBuilderForTable[T]
 }

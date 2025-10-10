@@ -150,9 +150,13 @@ class QueryBuilderTest extends TestBaseWithH2 {
   }
 
   it should "delete in simple cases" in new EnvWithSamples {
+    PersonPermission.query.delete()
+    Permission.query.delete()
     Person.query.filter(_.id === 1).delete()
     val all = Person.findAll()
     all should contain theSameElementsAs Seq(bob, charly)
+    Permission.findAll() shouldBe empty
+    PersonPermission.findAll() shouldBe empty
   }
 
   it should "update in simple cases" in new EnvWithSamples {

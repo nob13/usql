@@ -1,6 +1,6 @@
 package usql.dao
 
-import usql.{Sql, SqlInterpolationParameter, sql}
+import usql.{ConnectionProvider, Sql, SqlInterpolationParameter, sql}
 
 import java.util.UUID
 
@@ -114,8 +114,6 @@ private[usql] case class SimpleTableSelect[T](
     filters = filters :+ f
   )
 
-  override def update(in: T): Long = ???
-
   override def project[P](p: ColumnPath[T, P]): QueryBuilderForProjectedTable[P] = {
     SimpleTableProject(this, p)
   }
@@ -125,11 +123,20 @@ private[usql] case class SimpleTableSelect[T](
   }
 
   override def toPreSql: Sql = {
-    val maybeFilterSql: SqlInterpolationParameter = appliedFilters match {
+    sql"SELECT ${tabular.columns} FROM ${tabular.table} ${maybeFilterSql}"
+  }
+
+  def maybeFilterSql: SqlInterpolationParameter = {
+    appliedFilters match {
       case Some(f) => sql"WHERE ${f.toInterpolationParameter}"
       case None    => SqlInterpolationParameter.Empty
     }
-    sql"SELECT ${tabular.columns} FROM ${tabular.table} ${maybeFilterSql}"
+  }
+
+  override def update(in: T)(using cp: ConnectionProvider): Long = ???
+
+  override def delete()(using cp: ConnectionProvider): Long = {
+    sql"DELETE FROM ${tabular.table} ${maybeFilterSql}".update.run()
   }
 
   def appliedFilters: Option[Rep[Boolean]] = {
@@ -144,8 +151,6 @@ private[usql] case class SimpleTableSelect[T](
   }
 
   override def fielded: SqlFielded[T] = tabular
-
-  override def delete(): Long = ???
 
   protected def basePath: ColumnPath[T, T] = {
     ColumnPath.make[T](using tabular)
@@ -165,7 +170,9 @@ private[usql] case class SimpleTableProject[T, P](in: SimpleTableSelect[T], proj
     extends QueryBuilderForProjectedTable[P]
     with QueryBuilderBase[P]
     with QueryBuilderProjected[T, P] {
-  override def update(in: P): Long = ???
+  override def update(in: P)(using cp: ConnectionProvider): Long = {
+    ???
+  }
 
   override def map[R0](f: ColumnPath[P, P] => ColumnPath[P, R0]): QueryBuilderForProjectedTable[R0] = {
     project(f(basePath))
