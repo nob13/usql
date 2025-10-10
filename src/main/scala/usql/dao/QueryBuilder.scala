@@ -48,7 +48,7 @@ trait QueryBuilder[T] extends Query[T] {
 trait QueryBuilderForProjectedTable[T] extends QueryBuilder[T] {
 
   /** Update elements. */
-  def update(in: T)(using cp: ConnectionProvider): Long
+  def update(in: T)(using cp: ConnectionProvider): Int
 
   override def map[R0](f: ColumnPath[T, T] => ColumnPath[T, R0]): QueryBuilderForProjectedTable[R0]
 
@@ -59,7 +59,7 @@ trait QueryBuilderForProjectedTable[T] extends QueryBuilder[T] {
 trait QueryBuilderForTable[T] extends QueryBuilderForProjectedTable[T] {
 
   /** Delete selected elements. */
-  def delete()(using cp: ConnectionProvider): Long
+  def delete()(using cp: ConnectionProvider): Int
 
   override def filter(f: ColumnBasePath[T] => Rep[Boolean]): QueryBuilderForTable[T]
 }

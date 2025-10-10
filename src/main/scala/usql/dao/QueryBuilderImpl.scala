@@ -133,9 +133,9 @@ private[usql] case class SimpleTableSelect[T](
     }
   }
 
-  override def update(in: T)(using cp: ConnectionProvider): Long = ???
+  override def update(in: T)(using cp: ConnectionProvider): Int = ???
 
-  override def delete()(using cp: ConnectionProvider): Long = {
+  override def delete()(using cp: ConnectionProvider): Int = {
     sql"DELETE FROM ${tabular.table} ${maybeFilterSql}".update.run()
   }
 
@@ -170,8 +170,15 @@ private[usql] case class SimpleTableProject[T, P](in: SimpleTableSelect[T], proj
     extends QueryBuilderForProjectedTable[P]
     with QueryBuilderBase[P]
     with QueryBuilderProjected[T, P] {
-  override def update(in: P)(using cp: ConnectionProvider): Long = {
-    ???
+  override def update(value: P)(using cp: ConnectionProvider): Int = {
+    val rowEncoder = fielded.rowEncoder
+    val setter     = SqlInterpolationParameter.MultipleSeparated(
+      fielded.columns.map { column =>
+        column.id.namedPlaceholder
+      }
+    )
+    val sql        = sql"UPDATE ${in.tabular.table} SET $setter ${in.maybeFilterSql}".one(value)(using rowEncoder)
+    sql.update.run()
   }
 
   override def map[R0](f: ColumnPath[P, P] => ColumnPath[P, R0]): QueryBuilderForProjectedTable[R0] = {
@@ -189,7 +196,7 @@ private[usql] case class SimpleTableProject[T, P](in: SimpleTableSelect[T], proj
       case None    => SqlInterpolationParameter.Empty
     }
 
-    sql"SELECT ${projectionString} FROM ${in.tabular.table} ${maybeFilterSql}"
+    sql"SELECT ${projectionString} FROM ${in.tabular.table} ${in.maybeFilterSql}"
   }
 
   override def filter(f: ColumnBasePath[P] => Rep[Boolean]): QueryBuilder[P] = {
