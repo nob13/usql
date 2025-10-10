@@ -37,13 +37,11 @@ trait QueryBuilder[T] extends Query[T] {
       on: (ColumnBasePath[T], ColumnBasePath[R]) => Rep[Boolean]
   ): QueryBuilder[(T, Option[R])]
 
-  private[usql] def asFromItem(): FromItem[T] = {
+  /** Converts into a From Item which has an alias. */
+  private[usql] def asAliasedFromItem(): FromItem[T] = {
     val aliasName = s"X-${UUID.randomUUID()}"
     FromItem.Aliased(FromItem.SubSelect(this), aliasName)
   }
-
-  /** Returns the from item, if this Query is just returning the source. */
-  private[usql] def asPureFromItem: Option[FromItem[T]]
 }
 
 /** A Query Builder which somehow still presents a projected table. Supports update call. */
@@ -67,25 +65,6 @@ trait QueryBuilderForTable[T] extends QueryBuilderForProjectedTable[T] {
 }
 
 object QueryBuilder {
-
-  trait CommonMethods[T] extends QueryBuilder[T] {
-
-    /** Returns the base path fore mapping operations. */
-    protected def basePath: ColumnPath[T, T]
-
-    override def project[P](p: ColumnPath[T, P]): QueryBuilder[P] = {
-      Select(this.asFromItem(), p)
-    }
-
-    override def map[R0](f: ColumnPath[T, T] => ColumnPath[T, R0]): QueryBuilder[R0] = {
-      project(f(basePath))
-    }
-
-    override def filter(f: ColumnBasePath[T] => Rep[Boolean]): QueryBuilder[T] = {
-      val from = asFromItem()
-      Select(from, from.basePath, Seq(f(from.basePath)))
-    }
-  }
 
   def make[T](using tabular: SqlTabular[T]): QueryBuilderForTable[T] = {
     SimpleTableSelect(tabular)

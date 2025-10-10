@@ -2,6 +2,8 @@ package usql.dao
 
 import usql.{Sql, SqlInterpolationParameter, sql}
 
+import java.util.UUID
+
 private[usql] trait QueryBuilderBase[T] extends QueryBuilder[T] {
 
   /** Returns the base path fore mapping operations. */
@@ -11,8 +13,8 @@ private[usql] trait QueryBuilderBase[T] extends QueryBuilder[T] {
   def join[R](right: QueryBuilder[R])(
       on: (ColumnBasePath[T], ColumnBasePath[R]) => Rep[Boolean]
   ): QueryBuilder[(T, R)] = {
-    val leftSource  = this.asFromItem()
-    val rightSource = right.asFromItem()
+    val leftSource  = this.asAliasedFromItem()
+    val rightSource = right.asAliasedFromItem()
     val joinSource  = FromItem.InnerJoin(leftSource, rightSource, on(leftSource.basePath, rightSource.basePath))
     Select.makeSelect(joinSource)
   }
@@ -21,8 +23,8 @@ private[usql] trait QueryBuilderBase[T] extends QueryBuilder[T] {
   def leftJoin[R](right: QueryBuilder[R])(
       on: (ColumnBasePath[T], ColumnBasePath[R]) => Rep[Boolean]
   ): QueryBuilder[(T, Option[R])] = {
-    val leftSource  = this.asFromItem()
-    val rightSource = right.asFromItem()
+    val leftSource  = this.asAliasedFromItem()
+    val rightSource = right.asAliasedFromItem()
     val joinSource  = FromItem.LeftJoin(leftSource, rightSource, on(leftSource.basePath, rightSource.basePath))
     Select.makeSelect(joinSource)
   }
@@ -85,44 +87,6 @@ private[usql] class Select[T, P](from: FromItem[T], projection: ColumnPath[T, P]
   override def map[R0](f: ColumnPath[P, P] => ColumnPath[P, R0]): QueryBuilder[R0] = {
     project(f(basePath))
   }
-
-  override def asPureFromItem: Option[FromItem[P]] = {
-    Option.when(projection.isEmpty && filters.isEmpty) {
-      from.asInstanceOf[FromItem[P]]
-    }
-  }
-
-  override def join[R](
-      right: QueryBuilder[R]
-  )(on: (ColumnBasePath[P], ColumnBasePath[R]) => Rep[Boolean]): QueryBuilder[(P, R)] = {
-    // If we are pure, we can directly combine the fromItems
-    (for
-      leftPure  <- this.asPureFromItem
-      rightPure <- right.asPureFromItem
-    yield {
-      Select.makeSelect(
-        FromItem.InnerJoin(leftPure, rightPure, on(leftPure.basePath, rightPure.basePath))
-      )
-    }).getOrElse {
-      super.join(right)(on)
-    }
-  }
-
-  override def leftJoin[R](
-      right: QueryBuilder[R]
-  )(on: (ColumnBasePath[P], ColumnBasePath[R]) => Rep[Boolean]): QueryBuilder[(P, Option[R])] = {
-    // If we are pure, we can directly combine the fromItems
-    (for
-      leftPure  <- this.asPureFromItem
-      rightPure <- right.asPureFromItem
-    yield {
-      Select.makeSelect(
-        FromItem.LeftJoin(leftPure, rightPure, on(leftPure.basePath, rightPure.basePath))
-      )
-    }).getOrElse {
-      super.leftJoin(right)(on)
-    }
-  }
 }
 
 private[usql] object Select {
@@ -171,16 +135,19 @@ private[usql] case class SimpleTableSelect[T](
 
   override def fielded: SqlFielded[T] = tabular
 
-  override private[usql] def asPureFromItem: Option[FromItem[T]] = {
-    Option.when(filters.isEmpty) {
-      FromItem.FromTable(tabular)
-    }
-  }
-
   override def delete(): Long = ???
 
   protected def basePath: ColumnPath[T, T] = {
     ColumnPath.make[T](using tabular)
+  }
+
+  override private[usql] def asAliasedFromItem(): FromItem[T] = {
+    if filters.isEmpty then {
+      val aliasName = s"${tabular.table.name}-${UUID.randomUUID()}"
+      FromItem.Aliased(FromItem.FromTable(tabular), aliasName)
+    } else {
+      super.asAliasedFromItem()
+    }
   }
 }
 
@@ -215,10 +182,15 @@ private[usql] case class SimpleTableProject[T, P](in: SimpleTableSelect[T], proj
   override def fielded: SqlFielded[P] = ensureFielded(projection.structure)
 
   override def filter(f: ColumnBasePath[P] => Rep[Boolean]): QueryBuilder[P] = {
-    ???
+    val mappedFilter: ColumnBasePath[T] => Rep[Boolean] = in => {
+      f(ColumnPath.concat(in, projection))
+    }
+    copy(
+      in.copy(
+        filters = in.filters :+ mappedFilter
+      )
+    )
   }
-
-  override private[usql] def asPureFromItem: Option[FromItem[P]] = None
 
   override protected def basePath: ColumnPath[P, P] = ColumnPath.make[P](using fielded)
 }
