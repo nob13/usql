@@ -171,13 +171,13 @@ private[usql] case class SimpleTableProject[T, P](in: SimpleTableSelect[T], proj
     with QueryBuilderBase[P]
     with QueryBuilderProjected[T, P] {
   override def update(value: P)(using cp: ConnectionProvider): Int = {
-    val rowEncoder = fielded.rowEncoder
-    val setter     = SqlInterpolationParameter.MultipleSeparated(
-      fielded.columns.map { column =>
-        column.id.namedPlaceholder
+    val split  = fielded.rowEncoder.toSqlParameter(value)
+    val setter = SqlInterpolationParameter.MultipleSeparated(
+      fielded.columns.zip(split).map { case (column, value) =>
+        sql"${column.id} = ${value}"
       }
     )
-    val sql        = sql"UPDATE ${in.tabular.table} SET $setter ${in.maybeFilterSql}".one(value)(using rowEncoder)
+    val sql    = sql"UPDATE ${in.tabular.table} SET $setter ${in.maybeFilterSql}"
     sql.update.run()
   }
 

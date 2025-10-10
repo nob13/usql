@@ -1,5 +1,6 @@
 package usql
 
+import usql.SqlInterpolationParameter.SqlParameter
 import usql.dao.SqlColumnar
 
 import java.sql.PreparedStatement
@@ -24,11 +25,18 @@ trait RowEncoder[T] {
       override def fill(offset: Int, ps: PreparedStatement, value: U): Unit = me.fill(offset, ps, f(value))
 
       override def cardinality: Int = me.cardinality
+
+      override def toSqlParameter(value: U): Seq[SqlParameter[_]] = me.toSqlParameter(f(value))
     }
   }
 
   /** The number of elements set by this filler */
   def cardinality: Int
+
+  /** Convert a value into SQL Parameters. */
+  def toSqlParameter(value: T): Seq[SqlParameter[?]]
+  
+  private[usql] def toSqlParameterUnchecked(value: Any): Seq[SqlParameter[?]] = toSqlParameter(value.asInstanceOf[T])
 }
 
 object RowEncoder {
@@ -45,18 +53,28 @@ object RowEncoder {
     override def cardinality: Int = {
       headFiller.cardinality + tailFiller.cardinality
     }
+
+    override def toSqlParameter(value: H *: T): Seq[SqlParameter[_]] = {
+      headFiller.toSqlParameter(value.head) ++ tailFiller.toSqlParameter(value.tail)
+    }
   }
 
   given empty: RowEncoder[EmptyTuple] = new RowEncoder[EmptyTuple] {
     override def fill(offset: Int, ps: PreparedStatement, value: EmptyTuple): Unit = ()
 
     override def cardinality: Int = 0
+
+    override def toSqlParameter(value: EmptyTuple): Seq[SqlParameter[_]] = Nil
   }
 
   given forDataType[T](using dt: DataType[T]): RowEncoder[T] = new RowEncoder[T] {
     override def fill(offset: Int, ps: PreparedStatement, value: T): Unit = dt.fillByZeroBasedIdx(offset, ps, value)
 
     override def cardinality: Int = 1
+
+    override def toSqlParameter(value: T): Seq[SqlParameter[_]] = {
+      List(SqlParameter(value))
+    }
   }
 
   given forColumnar[T](using c: SqlColumnar[T]): RowEncoder[T] = c.rowEncoder

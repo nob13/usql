@@ -111,9 +111,8 @@ case class Sql(parts: Seq[(String, SqlInterpolationParameter)]) extends SqlBase 
     }
   )
 
-  private def sqlParameters: Seq[SqlParameter[?]] = parts.collect { case (_, p: SqlParameter[?]) =>
-    p
-  }
+  /** Collect embedded parameters. */
+  def parameters: Seq[SqlParameter[?]] = parts.flatMap(_._2.parameters)
 
   override def withPreparedStatement[T](
       f: PreparedStatement => T
@@ -121,7 +120,7 @@ case class Sql(parts: Seq[(String, SqlInterpolationParameter)]) extends SqlBase 
     cp.withConnection {
       val c = summon[Connection]
       Using.resource(sp.prepare(c, sql)) { statement =>
-        sqlParameters.zipWithIndex.foreach { case (param, idx) =>
+        parameters.zipWithIndex.foreach { case (param, idx) =>
           param.dataType.fillByZeroBasedIdx(idx, statement, param.value)
         }
         f(statement)

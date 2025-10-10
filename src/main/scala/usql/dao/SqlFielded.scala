@@ -1,6 +1,7 @@
 package usql.dao
 
-import usql.{Optionalize, RowDecoder, RowEncoder, SqlColumnId}
+import usql.SqlInterpolationParameter.SqlParameter
+import usql.{Optionalize, RowDecoder, RowEncoder, SqlColumnId, SqlInterpolationParameter}
 
 import java.sql.{PreparedStatement, ResultSet}
 import java.util.UUID
@@ -52,6 +53,15 @@ trait SqlFielded[T] extends SqlColumnar[T] {
     }
 
     override def cardinality: Int = SqlFielded.this.cardinality
+
+    override def toSqlParameter(value: T): Seq[SqlParameter[_]] = {
+      val builder     = Seq.newBuilder[SqlParameter[?]]
+      val fieldValues = split(value)
+      fieldValues.zip(fields).foreach { case (fieldValue, field) =>
+        builder ++= field.filler.toSqlParameterUnchecked(fieldValue)
+      }
+      builder.result()
+    }
   }
 
   override def toString: String = {

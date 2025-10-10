@@ -1,5 +1,6 @@
 package usql
 
+import usql.SqlInterpolationParameter.SqlParameter
 import usql.dao.{Alias, CrdBase, SqlColumn}
 
 import scala.language.implicitConversions
@@ -21,6 +22,9 @@ sealed trait SqlInterpolationParameter {
 
   /** Renames aliases. */
   def mapAliases(map: Map[String, String]): SqlInterpolationParameter = this
+
+  /** Collect nested parameters. */
+  def parameters: Seq[SqlParameter[?]] = Nil
 }
 
 object SqlInterpolationParameter {
@@ -43,6 +47,8 @@ object SqlInterpolationParameter {
     override def toString: String = {
       s"SqlParameter(${value} of type ${dataType.jdbcType.getName})"
     }
+
+    override def parameters: Seq[SqlParameter[_]] = List(this)
   }
 
   object SqlParameter {
@@ -84,6 +90,8 @@ object SqlInterpolationParameter {
         underlying = underlying.map(_.mapAliases(map))
       )
     }
+
+    override def parameters: Seq[SqlParameter[_]] = underlying.flatMap(_.parameters)
   }
 
   /** Some unchecked raw block. */
@@ -101,6 +109,8 @@ object SqlInterpolationParameter {
     override def collectAliases: Set[String] = sql.collectAliases
 
     override def mapAliases(map: Map[String, String]): SqlInterpolationParameter = sql.mapAliases(map)
+
+    override def parameters: Seq[SqlParameter[_]] = sql.parameters
   }
 
   case class TableIdParameter(tableId: SqlTableId) extends SqlInterpolationParameter {
