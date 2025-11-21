@@ -54,6 +54,13 @@ trait SqlFielded[T] extends SqlColumnar[T] {
 
     override def cardinality: Int = SqlFielded.this.cardinality
 
+    override def serialize(value: T): Seq[Any] = {
+      val fieldValues = split(value)
+      fieldValues.zip(fields).flatMap { case (fieldValue, field) =>
+        field.filler.serializeUnchecked(fieldValue)
+      }
+    }
+
     override def toSqlParameter(value: T): Seq[SqlParameter[_]] = {
       val builder     = Seq.newBuilder[SqlParameter[?]]
       val fieldValues = split(value)

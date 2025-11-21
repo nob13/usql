@@ -26,12 +26,20 @@ trait RowEncoder[T] {
 
       override def cardinality: Int = me.cardinality
 
+      override def serialize(value: U): Seq[Any] = me.serialize(f(value))
+
       override def toSqlParameter(value: U): Seq[SqlParameter[_]] = me.toSqlParameter(f(value))
     }
   }
 
   /** The number of elements set by this filler */
   def cardinality: Int
+
+  /** Serialize into values matching the DataTypes of [[SqlColumnar]] */
+  def serialize(value: T): Seq[Any]
+
+  /** Serialize something without type checking. */
+  private[usql] def serializeUnchecked(value: Any): Seq[Any] = serialize(value.asInstanceOf[T])
 
   /** Convert a value into SQL Parameters. */
   def toSqlParameter(value: T): Seq[SqlParameter[?]]
@@ -54,6 +62,10 @@ object RowEncoder {
       headFiller.cardinality + tailFiller.cardinality
     }
 
+    override def serialize(value: H *: T): Seq[Any] = {
+      headFiller.serialize(value.head) ++ tailFiller.serialize(value.tail)
+    }
+
     override def toSqlParameter(value: H *: T): Seq[SqlParameter[_]] = {
       headFiller.toSqlParameter(value.head) ++ tailFiller.toSqlParameter(value.tail)
     }
@@ -64,6 +76,8 @@ object RowEncoder {
 
     override def cardinality: Int = 0
 
+    override def serialize(value: EmptyTuple): Seq[Any] = Nil
+
     override def toSqlParameter(value: EmptyTuple): Seq[SqlParameter[_]] = Nil
   }
 
@@ -71,6 +85,8 @@ object RowEncoder {
     override def fill(offset: Int, ps: PreparedStatement, value: T): Unit = dt.fillByZeroBasedIdx(offset, ps, value)
 
     override def cardinality: Int = 1
+
+    override def serialize(value: T): Seq[Any] = Seq(value)
 
     override def toSqlParameter(value: T): Seq[SqlParameter[_]] = {
       List(SqlParameter(value))
