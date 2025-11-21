@@ -1,8 +1,6 @@
 package usql.comparison
 
-import usql.util.TestBase
-
-class TableRendererTest extends TestBase {
+class TableRendererTest extends ComparisonTestBase {
 
   val sampleTable = Table(
     columns = IndexedSeq("Hello", "World", "Very\nLong"),
@@ -69,9 +67,5 @@ class TableRendererTest extends TestBase {
            |Showing 1 of 2 Rows
            |""".stripMargin
       )
-  }
-
-  private def lineTrim(s: String): String = {
-    s.linesIterator.map(_.trim).mkString("\n")
   }
 }
