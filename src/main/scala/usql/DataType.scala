@@ -136,6 +136,13 @@ object DataType {
     override def optionalize: DataType[Option[T]] = this
 
     override def isOptional: Boolean = true
+
+    override def serialize(value: Option[T]): String = {
+      value match {
+        case None        => s"<none>"
+        case Some(value) => underlying.serialize(value)
+      }
+    }
   }
 
   given optionType[T](using dt: DataType[T]): DataType[Option[T]] = new OptionalDataType(dt)
