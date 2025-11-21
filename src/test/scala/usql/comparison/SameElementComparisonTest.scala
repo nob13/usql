@@ -28,10 +28,10 @@ class SameElementComparisonSpec extends ComparisonTestBase {
     incorrect.unexpected shouldBe List(4)
 
     given tr: ToTable[Int] = new ToTable[Int] {
-      override def columns: IndexedSeq[String] = IndexedSeq("x")
+      override def columns: Seq[String] = Seq("x")
 
-      override def rows(values: Seq[Int]): IndexedSeq[IndexedSeq[String]] =
-        values.map(v => IndexedSeq(v.toString)).toIndexedSeq
+      override def rows(values: Seq[Int]): Seq[Seq[String]] =
+        values.map(v => Seq(v.toString))
     }
 
     incorrect.renderFailure() shouldBe Some("""Matching: 4 Elements

@@ -3,10 +3,10 @@ package usql.comparison
 class TableRendererTest extends ComparisonTestBase {
 
   val sampleTable = Table(
-    columns = IndexedSeq("Hello", "World", "Very\nLong"),
-    rows = IndexedSeq(
-      IndexedSeq("How", "Are", ""),
-      IndexedSeq("", "You\n?")
+    columns = Seq("Hello", "World", "Very\nLong"),
+    rows = Seq(
+      Seq("How", "Are", ""),
+      Seq("", "You\n?")
     )
   )
 

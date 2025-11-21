@@ -7,8 +7,8 @@ import usql.dao.SqlColumnar
  * A simple table which can be rendered in ASCII.
  */
 case class Table(
-    columns: IndexedSeq[String],
-    rows: IndexedSeq[IndexedSeq[String]]
+    columns: Seq[String],
+    rows: Seq[Seq[String]]
 ) {
 
   def columnCount: Int = columns.size
@@ -48,9 +48,9 @@ case class Table(
 
 /** Type class converting something to a table. */
 trait ToTable[T] {
-  def columns: IndexedSeq[String]
+  def columns: Seq[String]
 
-  def rows(values: Seq[T]): IndexedSeq[IndexedSeq[String]]
+  def rows(values: Seq[T]): Seq[Seq[String]]
 
   def toTable(values: Seq[T]): Table = Table(columns, rows(values))
 }
@@ -69,12 +69,12 @@ object ToTable {
           .map { case (value, dataType) =>
             uncheckedToString(dataType, value)
           }
-          .toIndexedSeq
-      }.toIndexedSeq
+          .toVector
+      }.toVector
     }
 
-    private def uncheckedToString[T](dataType: DataType[T], value: Any): String = {
-      dataType.serialize(value.asInstanceOf[T])
+    private def uncheckedToString[X](dataType: DataType[X], value: Any): String = {
+      dataType.serialize(value.asInstanceOf[X])
     }
   }
 }
