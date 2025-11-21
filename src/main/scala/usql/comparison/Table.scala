@@ -1,5 +1,8 @@
 package usql.comparison
 
+import usql.DataType
+import usql.dao.SqlColumnar
+
 /**
  * A simple table which can be rendered in ASCII. All cells are optional.
  */
@@ -42,5 +45,32 @@ case class Table(
 
   override def toString: String = {
     TableRenderer.default.renderPretty(this)
+  }
+}
+
+object Table {
+
+  /** Converts elements into a table. */
+  def from[T](values: Seq[T])(using columnar: SqlColumnar[T]): Table = {
+    val columns   = columnar.columns.map(_.id.name).toIndexedSeq
+    val dataTypes = columnar.columns.map(_.dataType)
+    val encoder   = columnar.rowEncoder
+    val rows      = values.map { value =>
+      encoder
+        .serialize(value)
+        .zip(dataTypes)
+        .map { case (value, dataType) =>
+          uncheckedToString(dataType, value)
+        }
+        .toIndexedSeq
+    }.toIndexedSeq
+    Table(
+      columns = columns,
+      rows = rows
+    )
+  }
+
+  private def uncheckedToString[T](dataType: DataType[T], value: Any): String = {
+    dataType.serialize(value.asInstanceOf[T])
   }
 }
