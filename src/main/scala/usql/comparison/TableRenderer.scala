@@ -21,22 +21,37 @@ case class TableRenderer(settings: Settings) {
 
   /** Render as a table. */
   def render(table: Table): String = {
+    val sb = StringBuilder()
+    renderTo(table, sb)
+    sb.result()
+  }
+
+  /** Render to a StringBuidler. */
+  def renderTo(table: Table, sb: StringBuilder): Unit = {
     val normalized = table.normalized
     val widths     = calcColumnWidths(normalized)
-    renderNormalized(normalized, widths)
+    renderNormalized(sb, normalized, widths)
   }
 
   /**
    * Render something as flat if possible, as table otherwise. A newline is inserted if it's rendered as table.
    */
   def renderPretty(table: Table): String = {
+    val sb = StringBuilder()
+    renderPrettyTo(table, sb)
+    sb.result()
+  }
+
+  /** Render pretty to a String Builder. */
+  def renderPrettyTo(table: Table, sb: StringBuilder): Unit = {
     if table.isEmpty then {
-      "<Empty>"
+      sb ++= "<Empty>"
     } else {
       if table.columns.size <= 1 then {
-        renderFlat(table)
+        renderFlat(table, sb)
       } else {
-        "\n" + render(table)
+        sb += '\n'
+        renderTo(table, sb)
       }
     }
   }
@@ -44,19 +59,16 @@ case class TableRenderer(settings: Settings) {
   /**
    * Render only the first column flat, if existing.
    */
-  def renderFlat(table: Table): String = {
-    if table.columns.isEmpty then {
-      return "<Empty>"
+  def renderFlat(table: Table, sb: StringBuilder): Unit = {
+    if table.columns.isEmpty || table.rows.isEmpty then {
+      sb ++= "<Empty>"
+      return
     }
-    if table.rows.isEmpty then {
-      return "<Empty>"
+    sb ++= trimToLength(withoutNewline(table.rows.head.headOption.getOrElse(settings.noneField)), settings.maxCellWidth)
+    table.rows.tail.foreach { row =>
+      sb += ','
+      sb ++= trimToLength(row.headOption.getOrElse(settings.noneField), settings.maxCellWidth)
     }
-    table.rows
-      .map { row =>
-        val woNewline = withoutNewline(row.headOption.getOrElse(settings.noneField))
-        trimToLength(woNewline, settings.maxCellWidth)
-      }
-      .mkString(",")
   }
 
   private def calcColumnWidths(normalized: Table): Seq[Int] = {
@@ -72,8 +84,7 @@ case class TableRenderer(settings: Settings) {
       .map(Math.min(_, settings.maxCellWidth))
   }
 
-  private def renderNormalized(normalized: Table, columnWidths: Seq[Int]): String = {
-    val sb         = StringBuilder()
+  private def renderNormalized(sb: StringBuilder, normalized: Table, columnWidths: Seq[Int]): Unit = {
     var first      = true
     val fullLength = columnWidths.sum + normalized.columns.size - 1
     normalized.columns.view.zip(columnWidths).foreach { case (header, len) =>
@@ -115,8 +126,6 @@ case class TableRenderer(settings: Settings) {
     if normalized.rows.size >= settings.maxRows then {
       sb ++= s"Showing ${settings.maxRows} of ${normalized.rows.size} Rows\n"
     }
-
-    sb.result()
   }
 
   private def formatCell(s: String, fixLength: Int): String = {

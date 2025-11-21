@@ -25,10 +25,14 @@ case class SameElementComparison[T](
       val sb = StringBuilder()
       sb ++= s"Matching: ${matching.size} Elements\n"
       if unexpected.nonEmpty then {
-        sb ++= s"Unexpected: ${renderer.renderPretty(Table.from(unexpected))}\n"
+        sb ++= "Unexpected: "
+        renderer.renderPrettyTo(Table.from(unexpected), sb)
+        sb += '\n'
       }
       if missing.nonEmpty then {
-        sb ++= s"Missing:    ${renderer.renderPretty(Table.from(missing))}\n"
+        sb ++= "Missing:    "
+        renderer.renderPrettyTo(Table.from(missing), sb)
+        sb += '\n'
       }
       if missing.size == 1 && unexpected.size == 1 then {
         val missingTable    = Table.from(missing)
@@ -44,7 +48,9 @@ case class SameElementComparison[T](
             IndexedSeq(key, expected, got)
           }
           val comparisonTable = Table(IndexedSeq("Key", "Expected", "Got"), rows)
-          sb ++= s"Comparison: ${renderer.renderPretty(comparisonTable)}\n"
+          sb ++= s"Comparison: "
+          renderer.renderPrettyTo(comparisonTable, sb)
+          sb += '\n'
         }
       }
       Some(sb.result())
