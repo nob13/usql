@@ -4,11 +4,11 @@ import usql.DataType
 import usql.dao.SqlColumnar
 
 /**
- * A simple table which can be rendered in ASCII. All cells are optional.
+ * A simple table which can be rendered in ASCII.
  */
 case class Table(
     columns: IndexedSeq[String],
-    rows: IndexedSeq[IndexedSeq[Option[String]]]
+    rows: IndexedSeq[IndexedSeq[String]]
 ) {
 
   def columnCount: Int = columns.size
@@ -21,26 +21,12 @@ case class Table(
     val normalizedRows = rows.view
       .map {
         case row if row.size == columnCount => row
-        case row if row.size < columnCount  => row ++ Seq.fill(columnCount - row.size)(None)
+        case row if row.size < columnCount  => row ++ Seq.fill(columnCount - row.size)("")
         case row                            => row.take(columnCount)
       }
       .map(_.toIndexedSeq)
       .toIndexedSeq
     Table(columns, normalizedRows)
-  }
-
-  def getByName(columnName: String, rowId: Int): Option[String] = {
-    if rows.isDefinedAt(rowId) then {
-      val row = rows(rowId)
-      columns.indexOf(columnName) match {
-        case n if row.isDefinedAt(n) =>
-          row(n)
-        case _                       => None
-      }
-    } else {
-      None
-    }
-
   }
 
   override def toString: String = {

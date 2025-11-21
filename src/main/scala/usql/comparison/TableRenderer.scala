@@ -53,7 +53,7 @@ case class TableRenderer(settings: Settings) {
     }
     table.rows
       .map { row =>
-        val woNewline = withoutNewline(row.headOption.flatten.getOrElse(settings.noneField))
+        val woNewline = withoutNewline(row.headOption.getOrElse(settings.noneField))
         trimToLength(woNewline, settings.maxCellWidth)
       }
       .mkString(",")
@@ -64,7 +64,7 @@ case class TableRenderer(settings: Settings) {
     normalized.rows
       .foldLeft(headerWidths) { case (c, row) =>
         val cellWidths = row.view.map { cell =>
-          val cellValue = withoutNewline(cell.getOrElse(settings.noneField))
+          val cellValue = withoutNewline(cell)
           cellValue.length
         }
         c.zip(cellWidths).map { case (a, b) => Math.max(a, b) }
@@ -106,7 +106,7 @@ case class TableRenderer(settings: Settings) {
           sb += settings.columnSeparator
         }
         first = false
-        sb ++= formatCell(cell.getOrElse(settings.noneField), len)
+        sb ++= formatCell(cell, len)
         sb += settings.columnSeparator
       }
       sb += '\n'

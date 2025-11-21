@@ -7,8 +7,8 @@ class TableRendererTest extends TestBase {
   val sampleTable = Table(
     columns = IndexedSeq("Hello", "World", "Very\nLong"),
     rows = IndexedSeq(
-      IndexedSeq(Some("How"), Some("Are"), None),
-      IndexedSeq(None, Some("You\n?"))
+      IndexedSeq("How", "Are", ""),
+      IndexedSeq("", "You\n?")
     )
   )
 
@@ -17,8 +17,8 @@ class TableRendererTest extends TestBase {
       lineTrim(
         """||Hello|World |Very\nLong|
            ||-----|------|----------|
-           ||How  |Are   |n.A.      |
-           ||n.A. |You\n?|n.A.      |
+           ||How  |Are   |          |
+           ||     |You\n?|          |
            |""".stripMargin
       )
   }
@@ -29,8 +29,8 @@ class TableRendererTest extends TestBase {
       lineTrim(
         """||H...|W...|V...|
            ||----|----|----|
-           ||How |Are |n.A.|
-           ||n.A.|Y...|n.A.|
+           ||How |Are |    |
+           ||    |Y...|    |
            |""".stripMargin
       )
   }
@@ -41,8 +41,8 @@ class TableRendererTest extends TestBase {
       lineTrim(
         """||.|.|.|
            ||-|-|-|
-           ||.|.|.|
-           ||.|.|.|
+           ||.|.| |
+           || |.| |
            |""".stripMargin
       )
   }
@@ -65,7 +65,7 @@ class TableRendererTest extends TestBase {
       lineTrim(
         """||Hello|World |Very\nLong|
            ||-----|------|----------|
-           ||How  |Are   |n.A.      |
+           ||How  |Are   |          |
            |Showing 1 of 2 Rows
            |""".stripMargin
       )
