@@ -68,7 +68,7 @@ case class AppliedSql[T](base: SqlBase, parameter: T, rowEncoder: RowEncoder[T])
       f: PreparedStatement => T
   )(using cp: ConnectionProvider, sp: StatementPreparator): T = {
     base.withPreparedStatement { ps =>
-      rowEncoder.fill(ps, parameter)
+      rowEncoder.encode(ps, parameter)
       f(ps)
     }
   }

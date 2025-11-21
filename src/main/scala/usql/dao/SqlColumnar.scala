@@ -20,7 +20,7 @@ trait SqlColumnar[T] {
   /** Decoder for a full row. */
   def rowDecoder: RowDecoder[T]
 
-  /** Filler for a full row. */
+  /** Encoder for a full row. */
   def rowEncoder: RowEncoder[T]
 
   /** Returns true if T is an optional type */

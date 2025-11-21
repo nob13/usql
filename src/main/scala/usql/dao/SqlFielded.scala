@@ -43,12 +43,12 @@ trait SqlFielded[T] extends SqlColumnar[T] {
   }
 
   override def rowEncoder: RowEncoder[T] = new RowEncoder[T] {
-    override def fill(offset: Int, ps: PreparedStatement, value: T): Unit = {
+    override def encode(offset: Int, ps: PreparedStatement, value: T): Unit = {
       var currentOffset = offset
       val fieldValues   = split(value)
       fieldValues.zip(fields).foreach { case (fieldValue, field) =>
-        field.filler.fillUnchecked(currentOffset, ps, fieldValue)
-        currentOffset += field.filler.cardinality
+        field.encoder.fillUnchecked(currentOffset, ps, fieldValue)
+        currentOffset += field.encoder.cardinality
       }
     }
 
@@ -57,7 +57,7 @@ trait SqlFielded[T] extends SqlColumnar[T] {
     override def serialize(value: T): Seq[Any] = {
       val fieldValues = split(value)
       fieldValues.zip(fields).flatMap { case (fieldValue, field) =>
-        field.filler.serializeUnchecked(fieldValue)
+        field.encoder.serializeUnchecked(fieldValue)
       }
     }
 
@@ -65,7 +65,7 @@ trait SqlFielded[T] extends SqlColumnar[T] {
       val builder     = Seq.newBuilder[SqlParameter[?]]
       val fieldValues = split(value)
       fieldValues.zip(fields).foreach { case (fieldValue, field) =>
-        builder ++= field.filler.toSqlParameterUnchecked(fieldValue)
+        builder ++= field.encoder.toSqlParameterUnchecked(fieldValue)
       }
       builder.result()
     }
@@ -291,7 +291,7 @@ sealed trait Field[T] {
   def decoder: RowDecoder[T]
 
   /** Filler for this field. */
-  def filler: RowEncoder[T]
+  def encoder: RowEncoder[T]
 
   /** The value is optional */
   def isOptional: Boolean
@@ -305,7 +305,7 @@ object Field {
 
     override def decoder: RowDecoder[T] = RowDecoder.forDataType[T](using column.dataType)
 
-    override def filler: RowEncoder[T] = RowEncoder.forDataType[T](using column.dataType)
+    override def encoder: RowEncoder[T] = RowEncoder.forDataType[T](using column.dataType)
 
     override def toString: String = s"${fieldName}: ($column)"
 
@@ -330,7 +330,7 @@ object Field {
 
     override def decoder: RowDecoder[T] = fielded.rowDecoder
 
-    override def filler: RowEncoder[T] = fielded.rowEncoder
+    override def encoder: RowEncoder[T] = fielded.rowEncoder
 
     override def toString: String = s"${fieldName}: $fielded"
 

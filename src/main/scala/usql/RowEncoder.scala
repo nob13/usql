@@ -9,20 +9,20 @@ import java.sql.PreparedStatement
 trait RowEncoder[T] {
 
   /** Fill something at the zero-based position index into the prepared statement. */
-  def fill(offset: Int, ps: PreparedStatement, value: T): Unit
+  def encode(offset: Int, ps: PreparedStatement, value: T): Unit
 
   /** Fill some value without type checking. */
   private[usql] def fillUnchecked(offset: Int, ps: PreparedStatement, value: Any): Unit = {
-    fill(offset, ps, value.asInstanceOf[T])
+    encode(offset, ps, value.asInstanceOf[T])
   }
 
   /** Fill at position 0 */
-  def fill(ps: PreparedStatement, value: T): Unit = fill(0, ps, value)
+  def encode(ps: PreparedStatement, value: T): Unit = encode(0, ps, value)
 
   def contraMap[U](f: U => T): RowEncoder[U] = {
     val me = this
     new RowEncoder[U] {
-      override def fill(offset: Int, ps: PreparedStatement, value: U): Unit = me.fill(offset, ps, f(value))
+      override def encode(offset: Int, ps: PreparedStatement, value: U): Unit = me.encode(offset, ps, f(value))
 
       override def cardinality: Int = me.cardinality
 
@@ -50,29 +50,29 @@ trait RowEncoder[T] {
 object RowEncoder {
 
   given forTuple[H, T <: Tuple](
-      using headFiller: RowEncoder[H],
-      tailFiller: RowEncoder[T]
+      using headEncoder: RowEncoder[H],
+      tailEncoder: RowEncoder[T]
   ): RowEncoder[H *: T] = new RowEncoder[H *: T] {
-    override def fill(offset: Int, ps: PreparedStatement, value: H *: T): Unit = {
-      headFiller.fill(offset, ps, value.head)
-      tailFiller.fill(offset + headFiller.cardinality, ps, value.tail)
+    override def encode(offset: Int, ps: PreparedStatement, value: H *: T): Unit = {
+      headEncoder.encode(offset, ps, value.head)
+      tailEncoder.encode(offset + headEncoder.cardinality, ps, value.tail)
     }
 
     override def cardinality: Int = {
-      headFiller.cardinality + tailFiller.cardinality
+      headEncoder.cardinality + tailEncoder.cardinality
     }
 
     override def serialize(value: H *: T): Seq[Any] = {
-      headFiller.serialize(value.head) ++ tailFiller.serialize(value.tail)
+      headEncoder.serialize(value.head) ++ tailEncoder.serialize(value.tail)
     }
 
     override def toSqlParameter(value: H *: T): Seq[SqlParameter[_]] = {
-      headFiller.toSqlParameter(value.head) ++ tailFiller.toSqlParameter(value.tail)
+      headEncoder.toSqlParameter(value.head) ++ tailEncoder.toSqlParameter(value.tail)
     }
   }
 
   given empty: RowEncoder[EmptyTuple] = new RowEncoder[EmptyTuple] {
-    override def fill(offset: Int, ps: PreparedStatement, value: EmptyTuple): Unit = ()
+    override def encode(offset: Int, ps: PreparedStatement, value: EmptyTuple): Unit = ()
 
     override def cardinality: Int = 0
 
@@ -82,7 +82,7 @@ object RowEncoder {
   }
 
   given forDataType[T](using dt: DataType[T]): RowEncoder[T] = new RowEncoder[T] {
-    override def fill(offset: Int, ps: PreparedStatement, value: T): Unit = dt.fillByZeroBasedIdx(offset, ps, value)
+    override def encode(offset: Int, ps: PreparedStatement, value: T): Unit = dt.fillByZeroBasedIdx(offset, ps, value)
 
     override def cardinality: Int = 1
 
