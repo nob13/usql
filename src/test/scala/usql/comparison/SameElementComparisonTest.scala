@@ -27,7 +27,7 @@ class SameElementComparisonSpec extends ComparisonTestBase {
     incorrect.missing should contain theSameElementsAs List(2, 2, 3)
     incorrect.unexpected shouldBe List(4)
 
-    given tr: ToTable[Int] = new ToTable[Int] {
+    given tr: ToTable[Int] = new StaticToTable[Int] {
       override def columns: Seq[String] = Seq("x")
 
       override def rows(values: Seq[Int]): Seq[Seq[String]] =

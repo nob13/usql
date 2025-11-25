@@ -48,15 +48,25 @@ case class Table(
 
 /** Type class converting something to a table. */
 trait ToTable[T] {
+
+  /** Converts a values to a table. */
+  def toTable(values: Seq[T]): Table
+}
+
+/** To-Table conversion, where always the same columns for a type are returned. */
+trait StaticToTable[T] extends ToTable[T] {
+
+  /** Column Names. */
   def columns: Seq[String]
 
+  /** Row values. */
   def rows(values: Seq[T]): Seq[Seq[String]]
 
-  def toTable(values: Seq[T]): Table = Table(columns, rows(values))
+  final def toTable(values: Seq[T]): Table = Table(columns, rows(values))
 }
 
 object ToTable {
-  given columnarToTable[T](using columnar: SqlColumnar[T]): ToTable[T] with {
+  given columnarToTable[T](using columnar: SqlColumnar[T]): StaticToTable[T] with {
     val columns           = columnar.columns.map(_.id.name).toIndexedSeq
     private val dataTypes = columnar.columns.map(_.dataType)
     private val encoder   = columnar.rowEncoder
