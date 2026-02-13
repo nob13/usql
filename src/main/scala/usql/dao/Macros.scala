@@ -56,7 +56,7 @@ object Macros {
         SqlTableId.fromString(tn.name)
       }
       .getOrElse {
-        nm.caseClassToTableId(typeName[T])
+        nm.caseClassToTableId(summonInline[ValueOf[mirror.MirroredLabel]].value)
       }
 
     SqlTabular.SimpleTabular(
@@ -64,14 +64,6 @@ object Macros {
       fielded = fielded,
       isOptional = false
     )
-  }
-
-  inline def typeName[T]: String = {
-    ${ typeNameImpl[T] }
-  }
-
-  def typeNameImpl[T](using types: Type[T], quotes: Quotes): Expr[String] = {
-    Expr(Type.show[T])
   }
 
   inline def deriveLabels[T](using m: Mirror.Of[T]): List[String] = {
