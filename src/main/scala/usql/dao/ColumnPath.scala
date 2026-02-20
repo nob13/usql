@@ -1,8 +1,8 @@
 package usql.dao
 
+import usql.dao.TupleColumnPath.BuildFromTuple
 import usql.{Optionalize, SqlColumnIdentifying, SqlInterpolationParameter, UnOption}
 
-import scala.annotation.implicitNotFound
 import scala.language.implicitConversions
 
 /**
@@ -68,58 +68,7 @@ object ColumnPath {
     second.prepend(first)
   }
 
+  /** Build a ColumnPath from a tuple of Column Paths. */
   implicit def fromTuple[T](in: T)(using b: BuildFromTuple[T]): ColumnPath[b.Root, b.CombinedType] =
     b.build(in)
-
-  private def emptyPath[R]: TupleColumnPath[R, EmptyTuple] = TupleColumnPath.Empty[R]()
-
-  private def prependPath[R, H, T <: Tuple](
-      head: ColumnPath[R, H],
-      tail: TupleColumnPath[R, T]
-  ): TupleColumnPath[R, H *: T] = {
-    TupleColumnPath.Rec(head, tail)
-  }
-
-  /** Helper for building ColumnPath from Tuple */
-  @implicitNotFound("Could not find BuildFromTuple")
-  trait BuildFromTuple[T] {
-    type CombinedType <: Tuple
-
-    type Root
-
-    def build(from: T): TupleColumnPath[Root, CombinedType]
-  }
-
-  object BuildFromTuple {
-    type Aux[T, C <: Tuple, R] = BuildFromTuple[T] {
-      type CombinedType = C
-
-      type Root = R
-    }
-
-    given buildFromEmptyTuple[R]: BuildFromTuple.Aux[EmptyTuple, EmptyTuple, R] =
-      new BuildFromTuple[EmptyTuple] {
-        override type CombinedType = EmptyTuple
-
-        override type Root = R
-
-        override def build(from: EmptyTuple): TupleColumnPath[R, EmptyTuple] = emptyPath[R]
-      }
-
-    given buildFromIteration[H, T <: Tuple, R, TC <: Tuple](
-        using tailBuild: BuildFromTuple.Aux[T, TC, R]
-    ): BuildFromTuple.Aux[
-      (ColumnPath[R, H] *: T),
-      H *: TC,
-      R
-    ] = new BuildFromTuple[ColumnPath[R, H] *: T] {
-      override type CombinedType = H *: TC
-
-      override type Root = R
-
-      override def build(from: (ColumnPath[R, H] *: T)): TupleColumnPath[R, CombinedType] =
-        prependPath(from.head, tailBuild.build(from.tail))
-    }
-  }
-
 }
