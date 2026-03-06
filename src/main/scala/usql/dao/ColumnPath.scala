@@ -1,8 +1,8 @@
 package usql.dao
 
-import usql.dao.TupleColumnPath.BuildFromTuple
 import usql.{Optionalize, SqlColumnIdentifying, SqlInterpolationParameter, UnOption}
 
+import scala.annotation.implicitNotFound
 import scala.language.implicitConversions
 
 /**
@@ -15,7 +15,7 @@ import scala.language.implicitConversions
  * @tparam T
  *   end path
  */
-trait ColumnPath[R, T] extends Selectable with SqlColumnIdentifying with Rep[T] {
+sealed trait ColumnPath[R, T] extends Selectable with SqlColumnIdentifying with Rep[T] {
 
   /**
    * If we are coming from an optional value, we go into an optional value.
@@ -37,7 +37,7 @@ trait ColumnPath[R, T] extends Selectable with SqlColumnIdentifying with Rep[T] 
   def buildGetter: R => T
 
   /** The structure of T */
-  def structure: SqlFielded[T] | SqlColumn[T]
+  def structure: Structure[T]
 
   override final def toInterpolationParameter: SqlInterpolationParameter = columnIds
 
@@ -56,13 +56,81 @@ object ColumnPath {
 
   def make[T](using f: SqlFielded[T]): ColumnPath[T, T] = ColumnPathStart(f)
 
-  def makeOpt[T](using f: SqlFielded[T]): ColumnPath[Option[T], Option[T]] = {
-    ColumnPathStart(SqlFielded.OptionalSqlFielded(f))
+  case class Root[T](structure: Structure[T]) extends ColumnPath[T, T] {
+    override def prepend[R2](path: ColumnPath[R2, T]): ColumnPath[R2, T] = {
+      path
+    }
   }
 
-  /** Concat two Column Paths. */
-  def concat[A, B, C](first: ColumnPath[A, B], second: ColumnPath[B, C]): ColumnPath[A, C] = {
-    second.prepend(first)
+  case class Child[R, P, T](structure: Structure[T], parent: ColumnPath[R, P], field: String) extends ColumnPath[R, T] {
+    override def prepend[R2](path: ColumnPath[R2, R]): ColumnPath[R2, T] = {
+      parent.prepend(path).selectDynamic(field).asInstanceOf[ColumnPath[R2, T]]
+    }
+  }
+
+  sealed trait TuplePath[R, T <: Tuple] extends ColumnPath[R, T] {
+    override def structure: SqlFielded[T]
+
+    override def prepend[R2](path: ColumnPath[R2, R]): TuplePath[R2, T]
+  }
+
+  case class EmptyTuplePath[R]() extends TuplePath[R, EmptyTuple] {
+    override def prepend[R2](path: ColumnPath[R2, R]): TuplePath[R2, EmptyTuple] = EmptyTuplePath()
+
+    override def structure: SqlFielded[EmptyTuple] = SqlFielded.emptyTuple
+  }
+
+  case class RecTuplePath[R, H, T <: Tuple](head: ColumnPath[R, H], tail: TuplePath[R, T])
+    extends TuplePath[R, H *: T] {
+    override def prepend[R2](path: ColumnPath[R2, R]): TuplePath[R2, H *: T] = RecTuplePath(
+      head.prepend(path),
+      tail.prepend(path)
+    )
+
+    override def structure: SqlFielded[H *: T] = SqlFielded.recursiveTuple(using head.structure, tail.structure)
+  }
+
+  /** Helper for building ColumnPath from Tuple */
+  @implicitNotFound("Could not find BuildFromTuple")
+  trait BuildFromTuple[T] {
+    type CombinedType <: Tuple
+
+    type Root
+
+    def build(from: T): TuplePath[Root, CombinedType]
+  }
+
+  object BuildFromTuple {
+    type Aux[T, C <: Tuple, R] = BuildFromTuple[T] {
+      type CombinedType = C
+
+      type Root = R
+    }
+
+    given empty[R]: BuildFromTuple.Aux[EmptyTuple, EmptyTuple, R] =
+      new BuildFromTuple[EmptyTuple] {
+        override type CombinedType = EmptyTuple
+
+        override type Root = R
+
+        override def build(from: EmptyTuple): TuplePath[R, EmptyTuple] = EmptyTuplePath[R]()
+      }
+
+    given rec[H, T <: Tuple, R, TC <: Tuple](
+                                              using tailBuild: BuildFromTuple.Aux[T, TC, R]
+                                            ): BuildFromTuple.Aux[
+      (ColumnPath[R, H] *: T),
+      H *: TC,
+      R
+    ] = new BuildFromTuple[ColumnPath[R, H] *: T] {
+      override type CombinedType = H *: TC
+
+      override type Root = R
+
+      override def build(from: (ColumnPath[R, H] *: T)): TuplePath[R, CombinedType] = {
+        RecTuplePath(from.head, tailBuild.build(from.tail))
+      }
+    }
   }
 
   /** Build a ColumnPath from a tuple of Column Paths. */

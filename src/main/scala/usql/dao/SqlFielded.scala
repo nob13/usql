@@ -7,21 +7,29 @@ import java.sql.{PreparedStatement, ResultSet}
 import java.util.UUID
 import scala.collection.mutable
 import scala.deriving.Mirror
+import scala.util.NotGiven
 
 /** Something which has fields (e.g. a case class) */
-trait SqlFielded[T] extends SqlColumnar[T] {
+trait SqlFielded[T] extends SqlColumnar[T] with Structure[T] {
 
   /** Returns the available fields. */
   def fields: Seq[Field[?]]
 
+  override def fieldNames: Seq[String] = fields.map(_.fieldName)
+
+  override def selectField(name: String): Option[Structure[?]] = {
+    fields.find(_.fieldName == name).map {
+      case c: Field.Column[?] =>
+        c.column
+      case g: Field.Group[?]  =>
+        SqlFielded.MappedSqlFielded(g.fielded, id => g.mapping.map(g.columnBaseName, id))
+    }
+  }
+
   /** Access to the columns */
   def cols: ColumnPath[T, T] = ColumnPath.make(using this)
 
-  /** Split an instance into its fields */
-  protected[dao] def split(value: T): Seq[Any]
-
-  /** Build from field values. */
-  protected[dao] def build(fieldValues: Seq[Any]): T
+  override protected[dao] def fieldCardinality: Int = fields.size
 
   override lazy val columns: Seq[SqlColumn[?]] =
     fields.flatMap { field =>
@@ -141,18 +149,7 @@ object SqlFielded {
     Macros.buildFielded[T]
 
   case class MappedSqlFielded[T](underlying: SqlFielded[T], mapping: SqlColumnId => SqlColumnId) extends SqlFielded[T] {
-    override lazy val fields: Seq[Field[?]] = underlying.fields.map {
-      case c: Field.Column[?] =>
-        c.copy(
-          column = c.column.copy(
-            id = mapping(c.column.id)
-          )
-        )
-      case g: Field.Group[?]  =>
-        g.copy(
-          mapping = ColumnGroupMapping.Mapped(g.mapping, mapping)
-        )
-    }
+    override lazy val fields: Seq[Field[?]] = underlying.fields.map(_.mapColumnNames(mapping))
 
     override protected[dao] def split(value: T): Seq[Any] = underlying.split(value)
 
@@ -279,6 +276,37 @@ object SqlFielded {
 
     override def isOptional: Boolean = base.isOptional
   }
+
+  given optionalized[T](using f: SqlFielded[T]): SqlFielded[Optionalize[T]] = f.optionalize
+
+  given asOptional[T](using f: SqlFielded[T], notOption: NotGiven[T <:< Option[?]]): SqlFielded[Option[T]] =
+    f.optionalize.asInstanceOf[SqlFielded[Option[T]]]
+
+  given emptyTuple: SqlFielded[EmptyTuple] = SqlFielded.SimpleSqlFielded(
+    Nil,
+    _ => Nil,
+    _ => EmptyTuple
+  )
+
+  given recursiveTuple[H, T <: Tuple](using head: Structure[H], tailFielded: SqlFielded[T]): SqlFielded[H *: T] = {
+    val headField = head.toField("_1")
+    val tailGroup = tailFielded.fields.zipWithIndex.map { case (field, idx) =>
+      val updatedName = s"_${idx + 2}"
+      field match {
+        case c: Field.Column[?] => c.copy(fieldName = updatedName)
+        case g: Field.Group[?]  => g.copy(fieldName = updatedName)
+      }
+    }
+
+    SqlFielded.SimpleSqlFielded[H *: T](
+      headField +: tailGroup,
+      splitter = x => (head.split(x.head) ++ tailFielded.split(x.tail)).toList,
+      builder = x => {
+        val (hf, tf) = x.splitAt(head.fieldCardinality)
+        head.build(hf) *: tailFielded.build(tf)
+      }
+    )
+  }
 }
 
 /** A Field of a case class. */
@@ -298,6 +326,9 @@ sealed trait Field[T] {
 
   /** The value is optional */
   def isOptional: Boolean
+
+  /** Map all column names. */
+  def mapColumnNames(f: SqlColumnId => SqlColumnId): Field[T]
 }
 
 object Field {
@@ -313,6 +344,14 @@ object Field {
     override def toString: String = s"${fieldName}: ($column)"
 
     override def isOptional: Boolean = column.isOptional
+
+    override def mapColumnNames(f: SqlColumnId => SqlColumnId): Field[T] = {
+      copy(
+        column = column.copy(
+          id = f(column.id)
+        )
+      )
+    }
   }
 
   /** A Field which maps to a nested case class */
@@ -338,5 +377,11 @@ object Field {
     override def toString: String = s"${fieldName}: $fielded"
 
     override def isOptional: Boolean = fielded.isOptional
+
+    override def mapColumnNames(f: SqlColumnId => SqlColumnId): Field[T] = {
+      copy(
+        mapping = ColumnGroupMapping.Mapped(mapping, f)
+      )
+    }
   }
 }
