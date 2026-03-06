@@ -166,11 +166,13 @@ object SqlFielded {
     val needsOptionalization = underlying.fields.map(f => !f.isOptional)
 
     override def fields: Seq[Field[?]] = underlying.fields.map {
-      case g: Field.Group[?]  =>
+      case g: Field.Group[?] if g.isOptional =>
+        g
+      case g: Field.Group[?]                 =>
         g.copy(
           fielded = OptionalSqlFielded(g.fielded)
         )
-      case c: Field.Column[?] =>
+      case c: Field.Column[?]                =>
         c.copy(
           column = c.column.copy(
             dataType = c.column.dataType.optionalize

@@ -25,7 +25,9 @@ class QueryBuilderTest extends TestBaseWithH2 {
       |  person_id INT REFERENCES person(id),
       |  name VARCHAR,
       |  coordinate_x INT,
-      |  coordinate_y INT
+      |  coordinate_y INT,
+      |  secondary_coordinate_x INT,
+      |  secondary_coordinate_y INT
       |);
       |""".stripMargin
 
@@ -206,7 +208,13 @@ class QueryBuilderTest extends TestBaseWithH2 {
 
   case class Coordinate(x: Int, y: Int) derives SqlFielded
 
-  case class Location(id: Int, personId: Int, name: String, @ColumnGroup coordinate: Coordinate) derives SqlTabular
+  case class Location(
+      id: Int,
+      personId: Int,
+      name: String,
+      @ColumnGroup coordinate: Coordinate,
+      @ColumnGroup secondaryCoordinate: Option[Coordinate] = None
+  ) derives SqlTabular
 
   object Location extends KeyedCrudBase[Int, Location] {
     override def key: KeyColumnPath = cols.id
@@ -227,6 +235,39 @@ class QueryBuilderTest extends TestBaseWithH2 {
     results should contain theSameElementsAs Seq(
       ("Alice", home),
       ("Bob", work)
+    )
+  }
+
+  it should "work with inner joins on tables with optional sub-fields" in new EnvWithSamples {
+    val home = Location(1, alice.id, "Home", Coordinate(10, 20), Some(Coordinate(50, 60)))
+    val work = Location(2, bob.id, "Work", Coordinate(30, 40), None)
+    Location.insert(home, work)
+
+    val query = Person.query
+      .join(Location.query)(_.id === _.personId)
+      .map(x => (x._1.name, x._2))
+
+    val results = query.all()
+    results should contain theSameElementsAs Seq(
+      ("Alice", home),
+      ("Bob", work)
+    )
+  }
+
+  it should "work with left joins on tables with optional sub-fields" in new EnvWithSamples {
+    val home = Location(1, alice.id, "Home", Coordinate(10, 20), Some(Coordinate(50, 60)))
+    val work = Location(2, bob.id, "Work", Coordinate(30, 40), None)
+    Location.insert(home, work)
+
+    val query = Person.query
+      .leftJoin(Location.query)(_.id === _.personId)
+      .map(x => (x._1.name, x._2))
+
+    val results = query.all()
+    results should contain theSameElementsAs Seq(
+      ("Alice", Some(home)),
+      ("Bob", Some(work)),
+      ("Charly", None)
     )
   }
 

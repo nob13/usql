@@ -7,6 +7,7 @@ import scala.compiletime.{erasedValue, summonInline}
 import scala.deriving.Mirror
 import scala.quoted.{Expr, Quotes, Type}
 import scala.reflect.ClassTag
+import scala.util.NotGiven
 
 object Macros {
 
@@ -28,8 +29,11 @@ object Macros {
 
     case class Columnar[T](columnar: SqlColumnar[T]) extends TypeInfo[T]
 
-    given scalar[T](using dt: DataType[T]): TypeInfo[T]     = Scalar(dt)
-    given columnar[T](using c: SqlColumnar[T]): TypeInfo[T] = Columnar(c)
+    given scalar[T](using dt: DataType[T]): TypeInfo[T]                                                   = Scalar(dt)
+    given columnar[T](using c: SqlColumnar[T]): TypeInfo[T]                                               = Columnar(c)
+    given optional[T](using c: SqlColumnar[T], notOption: NotGiven[T <:< Option[?]]): TypeInfo[Option[T]] = Columnar(
+      c.optionalize
+    ).asInstanceOf[TypeInfo[Option[T]]]
   }
 
   /** Combined TypeInfos for a tuple. */

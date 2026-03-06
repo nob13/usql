@@ -17,7 +17,9 @@ class SqlFieldedTest extends TestBase {
       name: String,
       age: Option[Int],
       @ColumnGroup
-      coordinate: Coordinate
+      coordinate: Coordinate,
+      @ColumnGroup
+      ocoordinate: Option[Coordinate] = None
   ) derives SqlTabular
 
   object Person extends KeyedCrudBase[Int, Person] {
@@ -28,21 +30,34 @@ class SqlFieldedTest extends TestBase {
 
   it should "work" in {
     val adapter = summon[SqlFielded[Person]]
-    adapter.fields.map(_.fieldName) shouldBe Seq("id", "name", "age", "coordinate")
+    adapter.fields.map(_.fieldName) shouldBe Seq("id", "name", "age", "coordinate", "ocoordinate")
     adapter.columns
-      .map(_.id) shouldBe SqlColumnId.fromStrings("id", "long_name", "age", "coordinate_x", "coordinate_y")
+      .map(_.id) shouldBe SqlColumnId.fromStrings(
+      "id",
+      "long_name",
+      "age",
+      "coordinate_x",
+      "coordinate_y",
+      "ocoordinate_x",
+      "ocoordinate_y"
+    )
 
     adapter.cols.columnIds shouldBe SqlColumnId.fromStrings(
       "id",
       "long_name",
       "age",
       "coordinate_x",
-      "coordinate_y"
+      "coordinate_y",
+      "ocoordinate_x",
+      "ocoordinate_y"
     )
     adapter.cols.name.columnIds shouldBe SqlColumnId.fromStrings("long_name")
     Person.cols.name.columnIds shouldBe SqlColumnId.fromStrings("long_name")
 
     adapter.cols.coordinate.x.columnIds shouldBe SqlColumnId.fromStrings("coordinate_x")
     Person.cols.coordinate.x.columnIds shouldBe SqlColumnId.fromStrings("coordinate_x")
+
+    adapter.cols.ocoordinate.x.columnIds shouldBe SqlColumnId.fromStrings("ocoordinate_x")
+    Person.cols.ocoordinate.x.columnIds shouldBe SqlColumnId.fromStrings("ocoordinate_x")
   }
 }
