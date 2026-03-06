@@ -58,8 +58,6 @@ private[usql] case class ColumnPathStart[R](fielded: SqlFielded[R])
   override def prepend[R2](columnPath: ColumnPath[R2, R]): ColumnPath[R2, R] = {
     columnPath
   }
-
-  override def isEmpty: Boolean = true
 }
 
 private[usql] case class ColumnPathSelectGroup[R, P, T](
