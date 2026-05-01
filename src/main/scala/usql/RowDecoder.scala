@@ -72,4 +72,7 @@ object RowDecoder {
   }
 
   given forStructure[T](using c: Structure[T]): RowDecoder[T] = c.rowDecoder
+
+  given forNamedTuple[N <: Tuple, V <: Tuple](using inner: RowDecoder[V]): RowDecoder[NamedTuple.NamedTuple[N, V]] =
+    inner.asInstanceOf[RowDecoder[NamedTuple.NamedTuple[N, V]]]
 }

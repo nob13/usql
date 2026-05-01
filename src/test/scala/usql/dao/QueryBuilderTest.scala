@@ -298,6 +298,48 @@ class QueryBuilderTest extends TestBaseWithH2 {
     )
   }
 
+  it should "support mapping to a NamedTuple with field-name access on results" in new EnvWithSamples {
+    val q = Person.query.map(p => (name = p.name, age = p.age))
+
+    val rows = q.all()
+    rows should contain theSameElementsAs Seq(
+      (name = "Alice", age = Some(42)),
+      (name = "Bob", age = None),
+      (name = "Charly", age = None)
+    )
+
+    val first = rows.find(_.name == "Alice").get
+    first.name shouldBe "Alice"
+    first.age shouldBe Some(42)
+  }
+
+  it should "preserve underlying column ids when mapping to a NamedTuple" in new EnvWithSamples {
+    val q = Person.query.map(p => (renamedName = p.name, renamedAge = p.age))
+    q.structure.columns.map(_.id.name) shouldBe Seq("name", "age")
+  }
+
+  it should "support filter by NamedTuple field name via .named" in new EnvWithSamples {
+    val q       = Person.query.map(p => (name = p.name, age = p.age))
+    val onlyBob = q.filter(_.named.name === "Bob").all()
+    onlyBob shouldBe Seq((name = "Bob", age = None))
+  }
+
+  it should "support NamedTuple map after a join" in new EnvWithSamples {
+    val q = Person.query
+      .join(PersonPermission.query)(_.id === _.personId)
+      .map((p, pp) => (person = p, permission = pp.permissionId))
+
+    val rows = q.all()
+    rows should contain theSameElementsAs Seq(
+      (person = alice, permission = read.id),
+      (person = alice, permission = write.id),
+      (person = bob, permission = read.id)
+    )
+
+    val alicePerms = rows.filter(_.person == alice).map(_.permission)
+    alicePerms should contain theSameElementsAs Seq(read.id, write.id)
+  }
+
   it should "update whole objects" in new EnvWithSamples {
     val alice2 = alice.copy(
       name = "AliceX",

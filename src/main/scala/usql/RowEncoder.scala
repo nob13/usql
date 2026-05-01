@@ -94,4 +94,7 @@ object RowEncoder {
   }
 
   given forStructure[T](using c: Structure[T]): RowEncoder[T] = c.rowEncoder
+
+  given forNamedTuple[N <: Tuple, V <: Tuple](using inner: RowEncoder[V]): RowEncoder[NamedTuple.NamedTuple[N, V]] =
+    inner.asInstanceOf[RowEncoder[NamedTuple.NamedTuple[N, V]]]
 }

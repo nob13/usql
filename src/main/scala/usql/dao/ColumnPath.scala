@@ -4,6 +4,7 @@ import usql.{Optionalize, SqlColumnId, SqlColumnIdentifying, SqlInterpolationPar
 
 import scala.annotation.implicitNotFound
 import scala.language.implicitConversions
+import scala.util.NotGiven
 
 /**
  * Helper for going through the field path of Structure.
@@ -171,4 +172,66 @@ object ColumnPath {
   /** Build a ColumnPath from a tuple of Column Paths. */
   implicit def fromTuple[T](in: T)(using b: BuildFromTuple[T]): ColumnPath[b.Root, b.CombinedType] =
     b.build(in)
+
+  /**
+   * Wraps a `TuplePath` so the result type is a NamedTuple. Field access (`selectDynamic`) resolves on the named
+   * labels; `buildGetter` reuses the underlying tuple path because `NamedTuple[N, VC]` and `VC` share runtime
+   * representation.
+   */
+  case class NamedTupleColumnPath[R, N <: Tuple, VC <: Tuple](
+      tuplePath: TuplePath[R, VC],
+      structure: SqlFielded[NamedTuple.NamedTuple[N, VC]]
+  ) extends ColumnPath[R, NamedTuple.NamedTuple[N, VC]] {
+
+    override def buildGetter: R => NamedTuple.NamedTuple[N, VC] =
+      tuplePath.buildGetter.asInstanceOf[R => NamedTuple.NamedTuple[N, VC]]
+
+    override def prepend[R2](path: ColumnPath[R2, R]): ColumnPath[R2, NamedTuple.NamedTuple[N, VC]] =
+      NamedTupleColumnPath(tuplePath.prepend(path), structure)
+  }
+
+  /**
+   * Build a ColumnPath from a NamedTuple of Column Paths.
+   *
+   * `NotGiven[N =:= Tuple]` rejects the case where the user passed a plain tuple — Scala 3's NamedTuple opaque type has
+   * lower bound `>: V`, so a regular tuple is statically assignable to `NamedTuple[Tuple, V]` and would otherwise make
+   * this conversion ambiguous with [[fromTuple]].
+   */
+  implicit def fromNamedTuple[N <: Tuple, V <: Tuple, R, VC <: Tuple](
+      in: NamedTuple.NamedTuple[N, V]
+  )(
+      using b: BuildFromTuple.Aux[V, VC, R],
+      labels: SqlFielded.NamedTupleLabels[N],
+      notPlainTuple: NotGiven[N =:= Tuple]
+  ): ColumnPath[R, NamedTuple.NamedTuple[N, VC]] = {
+    val tuplePath      = b.build(in.asInstanceOf[V])
+    val namedStructure = SqlFielded.namedTupleFieldedFromLabels[N, VC](tuplePath.structure, labels.labels)
+    NamedTupleColumnPath(tuplePath, namedStructure)
+  }
+
+  /**
+   * Selectable view over a NamedTuple-typed `ColumnPath`.
+   *
+   * The parent [[ColumnPath.Fields]] type alias depends on a `T match { case Option[r] => ... }` that cannot reduce
+   * when T is a NamedTuple — the opaque type isn't statically disjoint from `Option`, so Scala's structural lookup
+   * can't find named fields directly via `path.fieldName`. This view declares `Fields` directly in terms of N and V,
+   * sidestepping the optionality match (a NamedTuple is never optional itself).
+   *
+   * Reach it with [[NamedTupleViewOps.named]]: `q.filter(_.named.fieldName === ...)`.
+   */
+  trait NamedTupleFieldsView[R, N <: Tuple, V <: Tuple] extends Selectable {
+    type Fields = NamedTuple.NamedTuple[N, scala.Tuple.Map[V, [X] =>> ColumnPath[R, X]]]
+
+    def underlying: ColumnPath[R, NamedTuple.NamedTuple[N, V]]
+
+    def selectDynamic(name: String): ColumnPath[R, ?] = underlying.selectDynamic(name)
+  }
+
+  extension [R, N <: Tuple, V <: Tuple](path: ColumnPath[R, NamedTuple.NamedTuple[N, V]])(
+      using NotGiven[N =:= Tuple]
+  )
+    /** Open the path's named-tuple structure for typed field access (`path.named.fieldName`). */
+    def named: NamedTupleFieldsView[R, N, V] = new NamedTupleFieldsView[R, N, V] {
+      override def underlying: ColumnPath[R, NamedTuple.NamedTuple[N, V]] = path
+    }
 }

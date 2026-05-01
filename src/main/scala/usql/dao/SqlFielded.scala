@@ -278,6 +278,43 @@ object SqlFielded {
     )
   }
 
+  /**
+   * Carries the runtime list of labels of a NamedTuple's `Names` tuple.
+   *
+   * Lets non-inline code thread NamedTuple field names without macro plumbing at the call site.
+   */
+  case class NamedTupleLabels[N <: Tuple](labels: List[String])
+
+  object NamedTupleLabels {
+    inline given derive[N <: Tuple]: NamedTupleLabels[N] = NamedTupleLabels(Macros.summonLabels[N])
+  }
+
+  /**
+   * Wraps a tuple `SqlFielded` so its result type is `NamedTuple[N, V]` and its fields are renamed to the labels of N.
+   *
+   * `NamedTuple[N, V]` shares its runtime representation with V, so split/build pass through unchanged.
+   */
+  private[dao] def namedTupleFieldedFromLabels[N <: Tuple, V <: Tuple](
+      underlying: SqlFielded[V],
+      labels: List[String]
+  ): SqlFielded[NamedTuple.NamedTuple[N, V]] = {
+    require(
+      underlying.fields.size == labels.size,
+      s"NamedTuple labels (${labels.size}) and underlying fields (${underlying.fields.size}) must match"
+    )
+    val renamed = underlying.fields.zip(labels).map { case (field, label) =>
+      field match {
+        case c: Field.Column[?] => c.copy(fieldName = label)
+        case g: Field.Group[?]  => g.copy(fieldName = label)
+      }
+    }
+    SqlFielded.SimpleSqlFielded[NamedTuple.NamedTuple[N, V]](
+      fields = renamed,
+      splitter = nt => underlying.split(nt.asInstanceOf[V]).toList,
+      builder = vs => underlying.build(vs).asInstanceOf[NamedTuple.NamedTuple[N, V]]
+    )
+  }
+
 }
 
 /** A Field of a case class. */
